@@ -1,6 +1,6 @@
 "use client";
 
-import type { CourtLocation, TravelTime } from "@/types";
+import type { CourtLocation, TravelTime, PlayHistory, Friend } from "@/types";
 import { SlotGrid } from "./SlotGrid";
 import { TravelBadge } from "./TravelBadge";
 
@@ -11,6 +11,8 @@ interface CourtPanelProps {
   authenticated: boolean;
   onToggleFavourite: () => void;
   onClose: () => void;
+  matchHistory: PlayHistory[];
+  friends: Friend[];
 }
 
 export function CourtPanel({
@@ -20,9 +22,16 @@ export function CourtPanel({
   authenticated,
   onToggleFavourite,
   onClose,
+  matchHistory,
+  friends,
 }: CourtPanelProps) {
+  const friendMap = new Map(friends.map((f) => [f.id, f]));
+  const locationHistory = matchHistory.filter(
+    (h) => h.locationId === location.id
+  );
+
   return (
-    <div className="absolute bottom-0 left-0 right-0 z-20 max-h-[70vh] overflow-y-auto bg-white rounded-t-2xl shadow-2xl border-t sm:left-auto sm:top-11 sm:bottom-0 sm:right-0 sm:w-[420px] sm:max-h-none sm:rounded-none sm:rounded-l-2xl sm:border-l sm:border-t-0">
+    <div className="fixed bottom-0 left-0 right-0 z-20 max-h-[70vh] overflow-y-auto bg-white rounded-t-2xl shadow-2xl border-t sm:fixed sm:left-auto sm:top-[88px] sm:bottom-0 sm:right-0 sm:w-[420px] sm:max-h-none sm:rounded-none sm:rounded-l-2xl sm:border-l sm:border-t-0">
       {/* Header */}
       <div className="sticky top-0 bg-white border-b px-4 py-3 flex items-start justify-between z-10">
         <div className="flex-1 min-w-0">
@@ -106,6 +115,53 @@ export function CourtPanel({
         <SlotGrid courts={location.courts} />
       </div>
 
+      {/* Match history for this location */}
+      {locationHistory.length > 0 && (
+        <div className="px-4 py-3 border-b">
+          <h3 className="font-semibold mb-2">Your Matches Here</h3>
+          <div className="space-y-2">
+            {locationHistory.map((entry) => (
+              <div
+                key={entry.id}
+                className="p-2 bg-gray-50 rounded-lg text-sm"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="font-medium">{formatDate(entry.date)}</span>
+                  {entry.time && (
+                    <span className="text-gray-400 text-xs">
+                      {formatTime12h(entry.time)}
+                    </span>
+                  )}
+                </div>
+                {entry.courtNumber && (
+                  <div className="text-xs text-gray-500">{entry.courtNumber}</div>
+                )}
+                {entry.friends.length > 0 && (
+                  <div className="flex gap-1 mt-1">
+                    {entry.friends.map((fid) => {
+                      const friend = friendMap.get(fid);
+                      return friend ? (
+                        <span
+                          key={fid}
+                          className="text-xs text-blue-600"
+                        >
+                          {friend.emoji} {friend.name}
+                        </span>
+                      ) : null;
+                    })}
+                  </div>
+                )}
+                {entry.notes && (
+                  <p className="text-xs text-gray-500 mt-1 italic">
+                    {entry.notes}
+                  </p>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Booking link */}
       <div className="px-4 py-3">
         <a
@@ -119,4 +175,22 @@ export function CourtPanel({
       </div>
     </div>
   );
+}
+
+function formatDate(dateStr: string): string {
+  const date = new Date(dateStr + "T12:00:00-07:00");
+  return date.toLocaleDateString("en-US", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    timeZone: "America/Los_Angeles",
+  });
+}
+
+function formatTime12h(time: string): string {
+  const [h, m] = time.split(":");
+  const hour = parseInt(h);
+  const ampm = hour >= 12 ? "PM" : "AM";
+  const h12 = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
+  return `${h12}:${m} ${ampm}`;
 }

@@ -121,10 +121,10 @@ export default function Home() {
               {showMenu && (
                 <>
                   <div
-                    className="fixed inset-0 z-40"
+                    className="fixed inset-0 z-[55]"
                     onClick={() => setShowMenu(false)}
                   />
-                  <div className="absolute right-0 top-8 z-50 bg-white rounded-lg shadow-xl border py-1 w-48">
+                  <div className="absolute right-0 top-8 z-[60] bg-white rounded-lg shadow-xl border py-1 w-48">
                     {auth.authenticated ? (
                       <>
                         <MenuButton
@@ -240,6 +240,8 @@ export default function Home() {
           authenticated={auth.authenticated}
           onToggleFavourite={() => toggleFavourite(selectedCourt.id)}
           onClose={() => setSelectedId(null)}
+          matchHistory={history}
+          friends={friends}
         />
       )}
 
