@@ -1,6 +1,6 @@
-// Default map center: San Francisco
-export const DEFAULT_LAT = 37.7603;
-export const DEFAULT_LNG = -122.4346;
+// Default map center: San Francisco, CA
+export const DEFAULT_LAT = 37.7749;
+export const DEFAULT_LNG = -122.4194;
 
 export const RECUS_API_BASE = "https://api.rec.us";
 export const RECUS_ORG_SLUG = "san-francisco-rec-park";

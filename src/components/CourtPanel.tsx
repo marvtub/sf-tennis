@@ -71,7 +71,13 @@ export function CourtPanel({
         </div>
 
         {/* Travel times */}
-        {travelTime && <TravelBadge travelTime={travelTime} />}
+        {travelTime && (
+          <TravelBadge
+            travelTime={travelTime}
+            destLat={location.lat}
+            destLng={location.lng}
+          />
+        )}
       </div>
 
       {/* Info */}
