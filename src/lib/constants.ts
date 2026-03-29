@@ -14,5 +14,5 @@ export const RECUS_HEADERS = {
 } as const;
 
 // Cache durations
-export const AVAILABILITY_CACHE_SECONDS = 60;
+export const AVAILABILITY_CACHE_SECONDS = 120; // 2 min — we now make ~100 per-site API calls per refresh
 export const DIRECTIONS_CACHE_SECONDS = 86400; // 24 hours

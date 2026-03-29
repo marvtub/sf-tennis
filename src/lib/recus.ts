@@ -1,6 +1,5 @@
 import {
   RECUS_API_BASE,
-  RECUS_ORG_SLUG,
   RECUS_HEADERS,
 } from "./constants";
 import type {
@@ -11,32 +10,98 @@ import type {
 } from "@/types";
 
 /**
- * Fetch all SF tennis court locations with availability from rec.us bulk endpoint.
- * One API call returns everything — no pagination needed.
+ * Fetch all SF tennis court locations with ACCURATE availability.
+ *
+ * Strategy:
+ *  1. Bulk endpoint → location metadata (name, coords, courts, pricing)
+ *  2. Per-site endpoint → actual availability (accounts for real bookings)
+ *
+ * The bulk endpoint's `availableSlots` field is INACCURATE — it returns
+ * theoretical schedule slots, not actual availability. We must use the
+ * per-site endpoint for each court to get real data.
  */
 export async function fetchAllCourts(): Promise<CourtLocation[]> {
-  const url = `${RECUS_API_BASE}/v1/locations/availability?organizationSlug=${RECUS_ORG_SLUG}&publishedSites=true`;
+  // Step 1: Get all locations + court metadata from bulk endpoint
+  const bulkUrl = `${RECUS_API_BASE}/v1/locations/availability?organizationSlug=san-francisco-rec-park&publishedSites=true`;
+  const bulkRes = await fetch(bulkUrl, { headers: RECUS_HEADERS });
 
-  const res = await fetch(url, { headers: RECUS_HEADERS });
-
-  if (!res.ok) {
-    throw new Error(`rec.us API error: ${res.status} ${res.statusText}`);
+  if (!bulkRes.ok) {
+    throw new Error(`rec.us API error: ${bulkRes.status} ${bulkRes.statusText}`);
   }
 
-  const data: RecUsLocationResponse[] = await res.json();
-  return data.map(transformLocation).filter((loc) => loc.courts.length > 0);
-}
+  const rawLocations: RecUsLocationResponse[] = await bulkRes.json();
 
-function transformLocation(raw: RecUsLocationResponse): CourtLocation {
-  const loc = raw.location;
+  // Step 2: Fetch per-site availability for ALL courts in parallel
   const now = new Date();
+  const startDate = toSFDate(now);
+  const endDate = toSFDate(new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000));
+
+  // Collect all court IDs
+  const allCourts: { courtId: string; locationIndex: number; courtIndex: number }[] = [];
+  for (let li = 0; li < rawLocations.length; li++) {
+    const courts = rawLocations[li].location.courts;
+    for (let ci = 0; ci < courts.length; ci++) {
+      allCourts.push({ courtId: courts[ci].id, locationIndex: li, courtIndex: ci });
+    }
+  }
+
+  // Fetch all per-site availability in parallel (batched to avoid hammering)
+  const BATCH_SIZE = 15;
+  const siteAvailability = new Map<string, string[]>();
+
+  for (let i = 0; i < allCourts.length; i += BATCH_SIZE) {
+    const batch = allCourts.slice(i, i + BATCH_SIZE);
+    const results = await Promise.all(
+      batch.map(async ({ courtId }) => {
+        try {
+          const url = `${RECUS_API_BASE}/v1/sites/${courtId}/availability?startDate=${startDate}&endDate=${endDate}`;
+          const res = await fetch(url, { headers: RECUS_HEADERS });
+          if (!res.ok) return { courtId, slots: [] as string[] };
+
+          const data = await res.json();
+          const slots: string[] = [];
+
+          // data.data is { "2026-03-30": { "13:30:00": { availableDurationsMinutes: [...] } } }
+          for (const [date, times] of Object.entries(data.data || {})) {
+            for (const time of Object.keys(times as Record<string, unknown>)) {
+              slots.push(`${date} ${time.slice(0, 5)}`);
+            }
+          }
+          return { courtId, slots };
+        } catch {
+          return { courtId, slots: [] as string[] };
+        }
+      })
+    );
+
+    for (const { courtId, slots } of results) {
+      siteAvailability.set(courtId, slots);
+    }
+  }
+
+  // Step 3: Transform with REAL availability data
   const todayStr = toSFDate(now);
 
+  return rawLocations
+    .map((raw) => transformLocation(raw, siteAvailability, todayStr))
+    .filter((loc) => loc.courts.length > 0);
+}
+
+function transformLocation(
+  raw: RecUsLocationResponse,
+  siteAvailability: Map<string, string[]>,
+  todayStr: string
+): CourtLocation {
+  const loc = raw.location;
+
   const courts: Court[] = loc.courts.map((c) => {
-    const slots: TimeSlot[] = c.availableSlots.map((s) => ({
+    // Use per-site availability (accurate) instead of bulk availableSlots
+    const realSlots = siteAvailability.get(c.id) || [];
+
+    const slots: TimeSlot[] = realSlots.map((s) => ({
       datetime: s,
       date: s.split(" ")[0],
-      time: s.split(" ")[1].slice(0, 5), // "07:30"
+      time: s.split(" ")[1],
     }));
 
     return {
@@ -87,7 +152,7 @@ function transformLocation(raw: RecUsLocationResponse): CourtLocation {
   };
 }
 
-/** Get today's date string in SF timezone: "2026-03-30" */
+/** Get date string in SF timezone: "2026-03-30" */
 function toSFDate(date: Date): string {
   return date.toLocaleDateString("en-CA", { timeZone: "America/Los_Angeles" });
 }
