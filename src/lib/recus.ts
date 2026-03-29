@@ -67,7 +67,7 @@ export async function fetchAllCourts(): Promise<CourtLocation[]> {
               slots.push(`${date} ${time.slice(0, 5)}`);
             }
           }
-          return { courtId, slots };
+          return { courtId, slots: slots.sort() };
         } catch {
           return { courtId, slots: [] as string[] };
         }
