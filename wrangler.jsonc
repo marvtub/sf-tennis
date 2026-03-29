@@ -3,17 +3,22 @@
   "main": ".open-next/worker.js",
   "compatibility_date": "2024-09-23",
   "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": true,
   "assets": {
     "directory": ".open-next/assets",
     "binding": "ASSETS"
   },
-  // Create D1 database: wrangler d1 create sf-tennis-db
-  // Then update the database_id below
   "d1_databases": [
     {
       "binding": "DB",
       "database_name": "sf-tennis-db",
-      "database_id": "TODO_REPLACE_WITH_D1_DATABASE_ID"
+      "database_id": "b7fdcbb5-b3cc-4bd1-a023-069c012bf27d"
+    }
+  ],
+  "routes": [
+    {
+      "pattern": "tennis.marvinaziz.de/*",
+      "zone_name": "marvinaziz.de"
     }
   ]
 }
