@@ -14,5 +14,6 @@
 
 # misc
 .DS_Store
+.data.json
 *.tsbuildinfo
 next-env.d.ts

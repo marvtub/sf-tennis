@@ -5,6 +5,7 @@ import type { CourtLocation } from "@/types";
 interface CourtPinProps {
   location: CourtLocation;
   isSelected: boolean;
+  isFavourite: boolean;
   onClick: () => void;
 }
 
@@ -29,13 +30,18 @@ const STATUS_STYLES = {
   },
 } as const;
 
-export function CourtPin({ location, isSelected, onClick }: CourtPinProps) {
+export function CourtPin({
+  location,
+  isSelected,
+  isFavourite,
+  onClick,
+}: CourtPinProps) {
   const style = STATUS_STYLES[location.availabilityStatus];
 
   return (
     <button
       onClick={onClick}
-      aria-label={`${location.name}: ${style.label}`}
+      aria-label={`${location.name}: ${style.label}${isFavourite ? " (favourite)" : ""}`}
       className={`
         flex items-center justify-center
         w-11 h-11 rounded-full
@@ -47,7 +53,7 @@ export function CourtPin({ location, isSelected, onClick }: CourtPinProps) {
         ${isSelected ? "scale-125 ring-2 ring-white ring-offset-2 ring-offset-transparent" : ""}
       `}
     >
-      <span aria-hidden="true">{style.icon}</span>
+      <span aria-hidden="true">{isFavourite ? "★" : style.icon}</span>
     </button>
   );
 }
@@ -59,6 +65,18 @@ export function HomePin() {
       aria-label="Home"
     >
       🏠
+    </div>
+  );
+}
+
+export function FriendPin({ emoji, name }: { emoji: string; name: string }) {
+  return (
+    <div
+      className="flex items-center justify-center w-10 h-10 rounded-full bg-pink-500 border-2 border-pink-700 text-white text-lg shadow-lg"
+      aria-label={`${name}'s location`}
+      title={name}
+    >
+      {emoji}
     </div>
   );
 }

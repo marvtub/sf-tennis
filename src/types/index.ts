@@ -92,3 +92,40 @@ export interface TravelTime {
   driving: { durationMinutes: number; distanceMeters: number } | null;
   transitUrl: string;
 }
+
+// ── Filter types ──
+
+export interface AvailabilityFilter {
+  date: string | null; // "2026-03-30" or null for any day
+  timeFrom: string | null; // "09:00" or null
+  timeTo: string | null; // "17:00" or null
+}
+
+// ── Persisted data types (D1) ──
+
+export interface FavouriteCourt {
+  locationId: string;
+  createdAt: string;
+}
+
+export interface Friend {
+  id: string;
+  name: string;
+  address: string;
+  lat: number;
+  lng: number;
+  emoji: string; // e.g. "👩" for Gabriella
+  createdAt: string;
+}
+
+export interface PlayHistory {
+  id: string;
+  locationId: string;
+  locationName: string;
+  courtNumber: string | null;
+  date: string; // "2026-03-29"
+  time: string | null; // "18:00"
+  friends: string[]; // friend IDs
+  notes: string;
+  createdAt: string;
+}

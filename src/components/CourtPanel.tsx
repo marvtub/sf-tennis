@@ -7,16 +7,39 @@ import { TravelBadge } from "./TravelBadge";
 interface CourtPanelProps {
   location: CourtLocation;
   travelTime: TravelTime | null;
+  isFavourite: boolean;
+  authenticated: boolean;
+  onToggleFavourite: () => void;
   onClose: () => void;
 }
 
-export function CourtPanel({ location, travelTime, onClose }: CourtPanelProps) {
+export function CourtPanel({
+  location,
+  travelTime,
+  isFavourite,
+  authenticated,
+  onToggleFavourite,
+  onClose,
+}: CourtPanelProps) {
   return (
     <div className="absolute bottom-0 left-0 right-0 z-20 max-h-[70vh] overflow-y-auto bg-white rounded-t-2xl shadow-2xl border-t sm:left-auto sm:top-11 sm:bottom-0 sm:right-0 sm:w-[420px] sm:max-h-none sm:rounded-none sm:rounded-l-2xl sm:border-l sm:border-t-0">
       {/* Header */}
       <div className="sticky top-0 bg-white border-b px-4 py-3 flex items-start justify-between z-10">
         <div className="flex-1 min-w-0">
-          <h2 className="text-lg font-bold truncate">{location.name}</h2>
+          <div className="flex items-center gap-2">
+            <h2 className="text-lg font-bold truncate">{location.name}</h2>
+            {authenticated && (
+              <button
+                onClick={onToggleFavourite}
+                className={`text-xl transition-transform hover:scale-110 ${
+                  isFavourite ? "text-yellow-500" : "text-gray-300 hover:text-yellow-400"
+                }`}
+                title={isFavourite ? "Remove from favourites" : "Add to favourites"}
+              >
+                {isFavourite ? "★" : "☆"}
+              </button>
+            )}
+          </div>
           <p className="text-sm text-gray-500 truncate">{location.address}</p>
         </div>
         <button
@@ -80,7 +103,7 @@ export function CourtPanel({ location, travelTime, onClose }: CourtPanelProps) {
       {/* Booking link */}
       <div className="px-4 py-3">
         <a
-          href={location.courts[0]?.bookingUrl}
+          href={`https://www.rec.us/locations/${location.id}`}
           target="_blank"
           rel="noopener noreferrer"
           className="block w-full text-center py-2.5 px-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm transition-colors"

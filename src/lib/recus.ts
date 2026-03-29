@@ -47,7 +47,7 @@ function transformLocation(raw: RecUsLocationResponse): CourtLocation {
       reservationWindowDays: c.defaultReservationWindowDays,
       releaseTime: c.reservationReleaseTimeLocal,
       availableSlots: slots,
-      bookingUrl: `https://rec.us/organizations/${RECUS_ORG_SLUG}/locations/${loc.id}/reservations/new?courtId=${c.id}`,
+      bookingUrl: `https://www.rec.us/locations/${loc.id}?courtId=${c.id}`,
     };
   });
 

@@ -4,12 +4,14 @@ import { useState, useCallback } from "react";
 import Map, { Marker, NavigationControl } from "react-map-gl/mapbox";
 import "mapbox-gl/dist/mapbox-gl.css";
 import { DEFAULT_LAT, DEFAULT_LNG } from "@/lib/constants";
-import type { CourtLocation, TravelTime } from "@/types";
-import { CourtPin, HomePin } from "./CourtPin";
+import type { CourtLocation, TravelTime, Friend } from "@/types";
+import { CourtPin, HomePin, FriendPin } from "./CourtPin";
 import { TravelBadgeMini } from "./TravelBadge";
 
 interface MapViewProps {
   courts: CourtLocation[];
+  friends: Friend[];
+  favourites: Set<string>;
   selectedId: string | null;
   onSelectCourt: (id: string | null) => void;
   travelTimes: Map<string, TravelTime>;
@@ -18,6 +20,8 @@ interface MapViewProps {
 
 export function MapView({
   courts,
+  friends,
+  favourites,
   selectedId,
   onSelectCourt,
   travelTimes,
@@ -50,6 +54,23 @@ export function MapView({
         <HomePin />
       </Marker>
 
+      {/* Friend markers */}
+      {friends.map((friend) => (
+        <Marker
+          key={`friend-${friend.id}`}
+          latitude={friend.lat}
+          longitude={friend.lng}
+          anchor="center"
+        >
+          <div className="relative">
+            <FriendPin emoji={friend.emoji} name={friend.name} />
+            <div className="absolute -bottom-5 left-1/2 -translate-x-1/2 whitespace-nowrap px-1.5 py-0.5 bg-white/90 rounded text-[10px] font-medium text-pink-700 shadow-sm border">
+              {friend.name}
+            </div>
+          </div>
+        </Marker>
+      ))}
+
       {/* Court markers */}
       {courts.map((loc) => (
         <Marker
@@ -66,6 +87,7 @@ export function MapView({
             <CourtPin
               location={loc}
               isSelected={selectedId === loc.id}
+              isFavourite={favourites.has(loc.id)}
               onClick={() => onSelectCourt(loc.id)}
             />
             <TravelBadgeMini travelTime={travelTimes.get(loc.id)} />
