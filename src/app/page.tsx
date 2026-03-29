@@ -2,11 +2,13 @@
 
 import { useState } from "react";
 import { useCourts } from "@/hooks/useCourts";
+import { useTravelTimes } from "@/hooks/useTravelTimes";
 import { MapView } from "@/components/MapView";
 import { CourtPanel } from "@/components/CourtPanel";
 
 export default function Home() {
   const { courts, fetchedAt, loading, error, refresh } = useCourts();
+  const travelTimes = useTravelTimes(courts);
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
   const mapboxToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN ?? "";
@@ -71,6 +73,7 @@ export default function Home() {
           courts={courts}
           selectedId={selectedId}
           onSelectCourt={setSelectedId}
+          travelTimes={travelTimes}
           mapboxToken={mapboxToken}
         />
       </div>
@@ -79,6 +82,7 @@ export default function Home() {
       {selectedCourt && (
         <CourtPanel
           location={selectedCourt}
+          travelTime={travelTimes.get(selectedCourt.id) ?? null}
           onClose={() => setSelectedId(null)}
         />
       )}

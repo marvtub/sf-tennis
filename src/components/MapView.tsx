@@ -4,13 +4,15 @@ import { useState, useCallback } from "react";
 import Map, { Marker, NavigationControl } from "react-map-gl/mapbox";
 import "mapbox-gl/dist/mapbox-gl.css";
 import { DEFAULT_LAT, DEFAULT_LNG } from "@/lib/constants";
-import type { CourtLocation } from "@/types";
+import type { CourtLocation, TravelTime } from "@/types";
 import { CourtPin, HomePin } from "./CourtPin";
+import { TravelBadgeMini } from "./TravelBadge";
 
 interface MapViewProps {
   courts: CourtLocation[];
   selectedId: string | null;
   onSelectCourt: (id: string | null) => void;
+  travelTimes: Map<string, TravelTime>;
   mapboxToken: string;
 }
 
@@ -18,6 +20,7 @@ export function MapView({
   courts,
   selectedId,
   onSelectCourt,
+  travelTimes,
   mapboxToken,
 }: MapViewProps) {
   const [viewState, setViewState] = useState({
@@ -59,11 +62,14 @@ export function MapView({
             onSelectCourt(loc.id);
           }}
         >
-          <CourtPin
-            location={loc}
-            isSelected={selectedId === loc.id}
-            onClick={() => onSelectCourt(loc.id)}
-          />
+          <div className="relative">
+            <CourtPin
+              location={loc}
+              isSelected={selectedId === loc.id}
+              onClick={() => onSelectCourt(loc.id)}
+            />
+            <TravelBadgeMini travelTime={travelTimes.get(loc.id)} />
+          </div>
         </Marker>
       ))}
     </Map>
