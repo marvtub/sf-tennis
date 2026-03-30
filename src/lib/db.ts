@@ -214,6 +214,66 @@ export async function addPlayHistory(
   }
 }
 
+export async function updatePlayHistory(
+  id: string,
+  fields: Partial<Omit<PlayHistory, "id" | "createdAt">>
+): Promise<boolean> {
+  const db = getDb();
+  if (!db) {
+    const history = getLocalData<PlayHistory[]>("playHistory", []);
+    const idx = history.findIndex((h) => h.id === id);
+    if (idx === -1) return false;
+    Object.assign(history[idx], fields);
+    setLocalData("playHistory", history);
+    return true;
+  }
+
+  // Build dynamic SET clause from provided fields
+  const columnMap: Record<string, string> = {
+    locationId: "location_id",
+    locationName: "location_name",
+    courtNumber: "court_number",
+    date: "date",
+    time: "time",
+    notes: "notes",
+  };
+
+  const sets: string[] = [];
+  const values: unknown[] = [];
+  for (const [key, col] of Object.entries(columnMap)) {
+    if (key in fields) {
+      sets.push(`${col} = ?`);
+      values.push((fields as Record<string, unknown>)[key] ?? null);
+    }
+  }
+
+  if (sets.length > 0) {
+    values.push(id);
+    await db
+      .prepare(`UPDATE play_history SET ${sets.join(", ")} WHERE id = ?`)
+      .bind(...values)
+      .run();
+  }
+
+  // Update friends if provided
+  if (fields.friends) {
+    await db
+      .prepare("DELETE FROM play_history_friends WHERE history_id = ?")
+      .bind(id)
+      .run();
+    for (const friendId of fields.friends) {
+      await db
+        .prepare(
+          "INSERT INTO play_history_friends (history_id, friend_id) VALUES (?, ?)"
+        )
+        .bind(id, friendId)
+        .run();
+    }
+  }
+
+  return true;
+}
+
 export async function deletePlayHistory(id: string): Promise<void> {
   const db = getDb();
   if (!db) {

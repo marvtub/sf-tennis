@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { addPlayHistory, getPlayHistory, getFriends } from "@/lib/db";
+import { addPlayHistory, getPlayHistory, getFriends, deletePlayHistory, updatePlayHistory } from "@/lib/db";
 
 function verifyApiKey(request: NextRequest): NextResponse | null {
   const authHeader = request.headers.get("authorization");
@@ -101,4 +101,82 @@ export async function POST(request: NextRequest) {
   });
 
   return NextResponse.json({ ok: true, id });
+}
+
+/**
+ * PUT /api/history/external — update a match (for agents/automations)
+ *
+ * Headers:
+ *   Authorization: Bearer <API_KEY>
+ *
+ * Body (JSON):
+ *   { id, ...fieldsToUpdate }
+ *   Updatable: locationId, locationName, courtNumber, date, time, friends, notes
+ */
+export async function PUT(request: NextRequest) {
+  const denied = verifyApiKey(request);
+  if (denied) return denied;
+
+  let body: Record<string, unknown>;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json(
+      { error: "Invalid JSON body" },
+      { status: 400 }
+    );
+  }
+
+  const { id, ...fields } = body as { id?: string; [key: string]: unknown };
+  if (!id) {
+    return NextResponse.json(
+      { error: "Missing required field: id" },
+      { status: 400 }
+    );
+  }
+
+  const updated = await updatePlayHistory(id, fields);
+  if (!updated) {
+    return NextResponse.json(
+      { error: "Entry not found" },
+      { status: 404 }
+    );
+  }
+
+  return NextResponse.json({ ok: true });
+}
+
+/**
+ * DELETE /api/history/external — delete a match (for agents/automations)
+ *
+ * Headers:
+ *   Authorization: Bearer <API_KEY>
+ *
+ * Body (JSON):
+ *   { id }
+ */
+export async function DELETE(request: NextRequest) {
+  const denied = verifyApiKey(request);
+  if (denied) return denied;
+
+  let body: Record<string, unknown>;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json(
+      { error: "Invalid JSON body" },
+      { status: 400 }
+    );
+  }
+
+  const { id } = body as { id?: string };
+  if (!id) {
+    return NextResponse.json(
+      { error: "Missing required field: id" },
+      { status: 400 }
+    );
+  }
+
+  await deletePlayHistory(id);
+  return NextResponse.json({ ok: true });
 }
