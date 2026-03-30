@@ -1,4 +1,4 @@
-// Default map center: San Francisco, CA
+// Default map center: San Francisco (generic, no personal address)
 export const DEFAULT_LAT = 37.7749;
 export const DEFAULT_LNG = -122.4194;
 

@@ -6,12 +6,12 @@ import { DEFAULT_LAT, DEFAULT_LNG } from "@/lib/constants";
 export interface UserLocation {
   lat: number;
   lng: number;
-  isDefault: boolean; // true = fallback to hardcoded home
+  isDefault: boolean; // true = fallback to generic SF center
 }
 
 /**
  * One-shot browser geolocation.
- * Falls back silently to DEFAULT_LAT/DEFAULT_LNG on denial or error.
+ * Falls back silently to SF city center on denial or error.
  */
 export function useUserLocation(): UserLocation {
   const [location, setLocation] = useState<UserLocation>({
