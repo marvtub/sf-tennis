@@ -5,6 +5,7 @@ const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
 
 const RATE_LIMIT_WINDOW_MS = 60 * 1000; // 1 minute
 const RATE_LIMIT_MAX_REQUESTS = 60; // 60 req/min for API routes
+const EXTERNAL_API_LIMIT = 10; // 10 req/min for external write API
 const MAP_LOAD_LIMIT = 100; // 100 page loads per minute (very generous)
 
 export function middleware(request: NextRequest) {
@@ -14,9 +15,10 @@ export function middleware(request: NextRequest) {
     "unknown";
 
   const isApi = request.nextUrl.pathname.startsWith("/api/");
+  const isExternalApi = request.nextUrl.pathname.startsWith("/api/history/external");
   const isPage = request.nextUrl.pathname === "/";
-  const limit = isApi ? RATE_LIMIT_MAX_REQUESTS : MAP_LOAD_LIMIT;
-  const key = `${ip}:${isApi ? "api" : "page"}`;
+  const limit = isExternalApi ? EXTERNAL_API_LIMIT : isApi ? RATE_LIMIT_MAX_REQUESTS : MAP_LOAD_LIMIT;
+  const key = `${ip}:${isExternalApi ? "external" : isApi ? "api" : "page"}`;
 
   const now = Date.now();
   const entry = rateLimitMap.get(key);
