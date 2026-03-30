@@ -3,9 +3,9 @@ import { DEFAULT_LAT, DEFAULT_LNG, DIRECTIONS_CACHE_SECONDS } from "@/lib/consta
 import type { TravelTime } from "@/types";
 
 /**
- * GET /api/directions?locations=id1:lat1,lng1|id2:lat2,lng2
+ * GET /api/directions?locations=id1:lat1,lng1|id2:lat2,lng2&origin=lat,lng
  *
- * Returns travel times from home to each location.
+ * Returns travel times from origin (or home fallback) to each location.
  * Uses Mapbox Directions API for walking + driving.
  * Generates Google Maps transit link (no API cost).
  */
@@ -16,6 +16,18 @@ export async function GET(request: NextRequest) {
       { error: "Missing 'locations' parameter" },
       { status: 400 }
     );
+  }
+
+  // Parse optional origin; fall back to hardcoded home
+  const originParam = request.nextUrl.searchParams.get("origin");
+  let originLat = DEFAULT_LAT;
+  let originLng = DEFAULT_LNG;
+  if (originParam) {
+    const [lat, lng] = originParam.split(",").map(Number);
+    if (Number.isFinite(lat) && Number.isFinite(lng)) {
+      originLat = lat;
+      originLng = lng;
+    }
   }
 
   const mapboxToken = process.env.MAPBOX_SECRET_TOKEN;
@@ -34,11 +46,11 @@ export async function GET(request: NextRequest) {
 
   const results: TravelTime[] = await Promise.all(
     locations.map(async (loc) => {
-      const transitUrl = `https://www.google.com/maps/dir/?api=1&origin=${DEFAULT_LAT},${DEFAULT_LNG}&destination=${loc.lat},${loc.lng}&travelmode=transit`;
+      const transitUrl = `https://www.google.com/maps/dir/?api=1&origin=${originLat},${originLng}&destination=${loc.lat},${loc.lng}&travelmode=transit`;
 
       const [walking, driving] = await Promise.all([
-        fetchMapboxDirections(mapboxToken, loc.lat, loc.lng, "walking"),
-        fetchMapboxDirections(mapboxToken, loc.lat, loc.lng, "driving"),
+        fetchMapboxDirections(mapboxToken, originLat, originLng, loc.lat, loc.lng, "walking"),
+        fetchMapboxDirections(mapboxToken, originLat, originLng, loc.lat, loc.lng, "driving"),
       ]);
 
       return {
@@ -62,13 +74,15 @@ export async function GET(request: NextRequest) {
 
 async function fetchMapboxDirections(
   token: string,
+  originLat: number,
+  originLng: number,
   destLat: number,
   destLng: number,
   profile: "walking" | "driving"
 ): Promise<{ durationMinutes: number; distanceMeters: number } | null> {
   try {
     // Mapbox uses lng,lat order
-    const url = `https://api.mapbox.com/directions/v5/mapbox/${profile}/${DEFAULT_LNG},${DEFAULT_LAT};${destLng},${destLat}?access_token=${token}&overview=false`;
+    const url = `https://api.mapbox.com/directions/v5/mapbox/${profile}/${originLng},${originLat};${destLng},${destLat}?access_token=${token}&overview=false`;
     const res = await fetch(url);
 
     if (!res.ok) return null;

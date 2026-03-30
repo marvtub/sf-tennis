@@ -13,6 +13,8 @@ interface CourtPanelProps {
   onClose: () => void;
   matchHistory: PlayHistory[];
   friends: Friend[];
+  originLat: number;
+  originLng: number;
 }
 
 export function CourtPanel({
@@ -24,6 +26,8 @@ export function CourtPanel({
   onClose,
   matchHistory,
   friends,
+  originLat,
+  originLng,
 }: CourtPanelProps) {
   const friendMap = new Map(friends.map((f) => [f.id, f]));
   const locationHistory = matchHistory.filter(
@@ -85,6 +89,8 @@ export function CourtPanel({
             travelTime={travelTime}
             destLat={location.lat}
             destLng={location.lng}
+            originLat={originLat}
+            originLng={originLng}
           />
         )}
       </div>

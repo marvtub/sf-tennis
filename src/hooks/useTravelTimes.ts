@@ -2,8 +2,9 @@
 
 import { useState, useEffect } from "react";
 import type { CourtLocation, TravelTime } from "@/types";
+import type { UserLocation } from "@/hooks/useUserLocation";
 
-const CACHE_KEY = "sf-tennis-travel-times";
+const CACHE_PREFIX = "sf-tennis-travel-times";
 const CACHE_DURATION_MS = 24 * 60 * 60 * 1000; // 24 hours
 
 interface CachedData {
@@ -11,7 +12,17 @@ interface CachedData {
   cachedAt: number;
 }
 
-export function useTravelTimes(courts: CourtLocation[]): Map<string, TravelTime> {
+function cacheKey(origin: UserLocation): string {
+  // Round to ~100m precision so tiny GPS jitter doesn't bust the cache
+  const lat = origin.lat.toFixed(3);
+  const lng = origin.lng.toFixed(3);
+  return `${CACHE_PREFIX}:${lat},${lng}`;
+}
+
+export function useTravelTimes(
+  courts: CourtLocation[],
+  origin: UserLocation
+): Map<string, TravelTime> {
   const [travelTimes, setTravelTimes] = useState<Map<string, TravelTime>>(
     new Map()
   );
@@ -19,9 +30,11 @@ export function useTravelTimes(courts: CourtLocation[]): Map<string, TravelTime>
   useEffect(() => {
     if (courts.length === 0) return;
 
+    const key = cacheKey(origin);
+
     // Check localStorage cache
     try {
-      const cached = localStorage.getItem(CACHE_KEY);
+      const cached = localStorage.getItem(key);
       if (cached) {
         const parsed: CachedData = JSON.parse(cached);
         if (Date.now() - parsed.cachedAt < CACHE_DURATION_MS) {
@@ -39,7 +52,9 @@ export function useTravelTimes(courts: CourtLocation[]): Map<string, TravelTime>
       .map((c) => `${c.id}:${c.lat},${c.lng}`)
       .join("|");
 
-    fetch(`/api/directions?locations=${encodeURIComponent(locationsParam)}`)
+    const originParam = `${origin.lat},${origin.lng}`;
+
+    fetch(`/api/directions?locations=${encodeURIComponent(locationsParam)}&origin=${encodeURIComponent(originParam)}`)
       .then((res) => {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         return res.json();
@@ -51,7 +66,7 @@ export function useTravelTimes(courts: CourtLocation[]): Map<string, TravelTime>
         // Cache in localStorage
         try {
           localStorage.setItem(
-            CACHE_KEY,
+            key,
             JSON.stringify({
               travelTimes: data.travelTimes,
               cachedAt: Date.now(),
@@ -64,7 +79,7 @@ export function useTravelTimes(courts: CourtLocation[]): Map<string, TravelTime>
       .catch((err) => {
         console.error("Failed to fetch travel times:", err);
       });
-  }, [courts]);
+  }, [courts, origin]);
 
   return travelTimes;
 }

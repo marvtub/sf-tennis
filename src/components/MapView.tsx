@@ -3,8 +3,8 @@
 import { useState, useCallback } from "react";
 import Map, { Marker, NavigationControl } from "react-map-gl/mapbox";
 import "mapbox-gl/dist/mapbox-gl.css";
-import { DEFAULT_LAT, DEFAULT_LNG } from "@/lib/constants";
 import type { CourtLocation, TravelTime, Friend } from "@/types";
+import type { UserLocation } from "@/hooks/useUserLocation";
 import { CourtPin, HomePin, FriendPin } from "./CourtPin";
 import { TravelBadgeMini } from "./TravelBadge";
 
@@ -16,6 +16,7 @@ interface MapViewProps {
   onSelectCourt: (id: string | null) => void;
   travelTimes: Map<string, TravelTime>;
   mapboxToken: string;
+  userLocation: UserLocation;
 }
 
 export function MapView({
@@ -26,12 +27,24 @@ export function MapView({
   onSelectCourt,
   travelTimes,
   mapboxToken,
+  userLocation,
 }: MapViewProps) {
   const [viewState, setViewState] = useState({
-    latitude: DEFAULT_LAT,
-    longitude: DEFAULT_LNG,
+    latitude: userLocation.lat,
+    longitude: userLocation.lng,
     zoom: 12.5,
   });
+
+  // Re-center when user location resolves from geolocation
+  const [hasCentered, setHasCentered] = useState(userLocation.isDefault ? false : true);
+  if (!hasCentered && !userLocation.isDefault) {
+    setViewState((prev) => ({
+      ...prev,
+      latitude: userLocation.lat,
+      longitude: userLocation.lng,
+    }));
+    setHasCentered(true);
+  }
 
   const handleMapClick = useCallback(() => {
     onSelectCourt(null);
@@ -49,8 +62,8 @@ export function MapView({
     >
       <NavigationControl position="top-right" />
 
-      {/* Home marker */}
-      <Marker latitude={DEFAULT_LAT} longitude={DEFAULT_LNG} anchor="center">
+      {/* User location marker */}
+      <Marker latitude={userLocation.lat} longitude={userLocation.lng} anchor="center">
         <HomePin />
       </Marker>
 

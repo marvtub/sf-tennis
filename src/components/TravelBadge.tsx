@@ -1,24 +1,31 @@
 "use client";
 
 import type { TravelTime } from "@/types";
-import { DEFAULT_LAT, DEFAULT_LNG } from "@/lib/constants";
 
 interface TravelBadgeProps {
   travelTime: TravelTime;
   destLat: number;
   destLng: number;
+  originLat: number;
+  originLng: number;
 }
 
-function gmapsUrl(destLat: number, destLng: number, mode: "walking" | "driving" | "transit") {
-  return `https://www.google.com/maps/dir/?api=1&origin=${DEFAULT_LAT},${DEFAULT_LNG}&destination=${destLat},${destLng}&travelmode=${mode}`;
+function gmapsUrl(
+  originLat: number,
+  originLng: number,
+  destLat: number,
+  destLng: number,
+  mode: "walking" | "driving" | "transit"
+) {
+  return `https://www.google.com/maps/dir/?api=1&origin=${originLat},${originLng}&destination=${destLat},${destLng}&travelmode=${mode}`;
 }
 
-export function TravelBadge({ travelTime, destLat, destLng }: TravelBadgeProps) {
+export function TravelBadge({ travelTime, destLat, destLng, originLat, originLng }: TravelBadgeProps) {
   return (
     <div className="flex items-center gap-2 text-sm flex-wrap">
       {travelTime.walking && (
         <a
-          href={gmapsUrl(destLat, destLng, "walking")}
+          href={gmapsUrl(originLat, originLng, destLat, destLng, "walking")}
           target="_blank"
           rel="noopener noreferrer"
           className="flex items-center gap-1 px-2 py-1 bg-blue-50 text-blue-700 rounded-md hover:bg-blue-100 transition-colors"
@@ -28,7 +35,7 @@ export function TravelBadge({ travelTime, destLat, destLng }: TravelBadgeProps) 
       )}
       {travelTime.driving && (
         <a
-          href={gmapsUrl(destLat, destLng, "driving")}
+          href={gmapsUrl(originLat, originLng, destLat, destLng, "driving")}
           target="_blank"
           rel="noopener noreferrer"
           className="flex items-center gap-1 px-2 py-1 bg-purple-50 text-purple-700 rounded-md hover:bg-purple-100 transition-colors"
@@ -37,7 +44,7 @@ export function TravelBadge({ travelTime, destLat, destLng }: TravelBadgeProps) 
         </a>
       )}
       <a
-        href={gmapsUrl(destLat, destLng, "transit")}
+        href={gmapsUrl(originLat, originLng, destLat, destLng, "transit")}
         target="_blank"
         rel="noopener noreferrer"
         className="flex items-center gap-1 px-2 py-1 bg-orange-50 text-orange-700 rounded-md hover:bg-orange-100 transition-colors"

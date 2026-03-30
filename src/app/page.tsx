@@ -3,6 +3,7 @@
 import { useState, useMemo } from "react";
 import { useCourts } from "@/hooks/useCourts";
 import { useTravelTimes } from "@/hooks/useTravelTimes";
+import { useUserLocation } from "@/hooks/useUserLocation";
 import { useAuth } from "@/hooks/useAuth";
 import { useFavourites } from "@/hooks/useFavourites";
 import { useFriends } from "@/hooks/useFriends";
@@ -21,7 +22,8 @@ import type { AvailabilityFilter } from "@/types";
 
 export default function Home() {
   const { courts: rawCourts, fetchedAt, loading, error, refresh } = useCourts();
-  const travelTimes = useTravelTimes(rawCourts);
+  const userLocation = useUserLocation();
+  const travelTimes = useTravelTimes(rawCourts, userLocation);
   const auth = useAuth();
   const { favourites, toggleFavourite } = useFavourites();
   const { friends, addFriend, removeFriend } = useFriends();
@@ -228,6 +230,7 @@ export default function Home() {
           onSelectCourt={setSelectedId}
           travelTimes={travelTimes}
           mapboxToken={mapboxToken}
+          userLocation={userLocation}
         />
       </div>
 
@@ -242,6 +245,8 @@ export default function Home() {
           onClose={() => setSelectedId(null)}
           matchHistory={history}
           friends={friends}
+          originLat={userLocation.lat}
+          originLng={userLocation.lng}
         />
       )}
 
