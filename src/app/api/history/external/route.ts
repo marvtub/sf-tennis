@@ -1,17 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { addPlayHistory } from "@/lib/db";
+import { addPlayHistory, getPlayHistory, getFriends } from "@/lib/db";
 
-/**
- * POST /api/history/external — add a match via API key (for agents/automations)
- *
- * Headers:
- *   Authorization: Bearer <API_KEY>
- *
- * Body (JSON):
- *   { locationId, locationName, courtNumber?, date, time?, friends?, notes? }
- */
-export async function POST(request: NextRequest) {
-  // Verify API key
+function verifyApiKey(request: NextRequest): NextResponse | null {
   const authHeader = request.headers.get("authorization");
   const apiKey = process.env.API_KEY;
 
@@ -28,6 +18,46 @@ export async function POST(request: NextRequest) {
       { status: 401 }
     );
   }
+
+  return null;
+}
+
+/**
+ * GET /api/history/external — list match history, friends, and court locations
+ *
+ * Headers:
+ *   Authorization: Bearer <API_KEY>
+ *
+ * Returns: { history, friends, courtsUrl }
+ */
+export async function GET(request: NextRequest) {
+  const denied = verifyApiKey(request);
+  if (denied) return denied;
+
+  const [history, friends] = await Promise.all([
+    getPlayHistory(),
+    getFriends(),
+  ]);
+
+  return NextResponse.json({
+    history,
+    friends: friends.map((f) => ({ id: f.id, name: f.name, emoji: f.emoji })),
+    courtsUrl: "/api/courts (public, no auth needed)",
+  });
+}
+
+/**
+ * POST /api/history/external — add a match via API key (for agents/automations)
+ *
+ * Headers:
+ *   Authorization: Bearer <API_KEY>
+ *
+ * Body (JSON):
+ *   { locationId, locationName, courtNumber?, date, time?, friends?, notes? }
+ */
+export async function POST(request: NextRequest) {
+  const denied = verifyApiKey(request);
+  if (denied) return denied;
 
   // Parse body
   let body: Record<string, unknown>;
