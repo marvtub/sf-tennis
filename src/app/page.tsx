@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { useCourts } from "@/hooks/useCourts";
 import { useTravelTimes } from "@/hooks/useTravelTimes";
 import { useUserLocation } from "@/hooks/useUserLocation";
@@ -17,6 +17,8 @@ import { LoginDialog } from "@/components/LoginDialog";
 import { AddFriendDialog } from "@/components/AddFriendDialog";
 import { AddHistoryDialog } from "@/components/AddHistoryDialog";
 import { HistoryPanel } from "@/components/HistoryPanel";
+import { CommandSearch } from "@/components/CommandSearch";
+import { LocationList } from "@/components/LocationList";
 import { applyFilter, getAvailableDates } from "@/lib/filter";
 import type { AvailabilityFilter } from "@/types";
 
@@ -42,6 +44,24 @@ export default function Home() {
   const [showAddHistory, setShowAddHistory] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
+  const [showSearch, setShowSearch] = useState(false);
+  const [viewMode, setViewMode] = useState<"map" | "list">("map");
+
+  // ⌘K / Ctrl+K shortcut
+  const handleSearchSelect = useCallback((id: string) => {
+    setSelectedId(id);
+  }, []);
+
+  useEffect(() => {
+    function handleKey(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+        e.preventDefault();
+        setShowSearch((s) => !s);
+      }
+    }
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, []);
 
   const mapboxToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN ?? "";
 
@@ -77,7 +97,33 @@ export default function Home() {
       {/* Top status bar */}
       <div className="absolute top-0 left-0 right-0 z-10 bg-white/90 backdrop-blur-sm border-b shadow-sm">
         <div className="flex items-center justify-between px-4 py-2">
-          <h1 className="text-lg font-bold">🎾 SF Tennis Courts</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-lg font-bold">🎾 SF Tennis Courts</h1>
+
+            {/* Search button */}
+            <button
+              onClick={() => setShowSearch(true)}
+              className="hidden sm:flex items-center gap-2 px-3 py-1 text-xs text-gray-400 bg-gray-100 hover:bg-gray-200 border rounded-lg transition-colors"
+            >
+              🔍 Search
+              <kbd className="px-1 py-0.5 text-[10px] font-medium bg-white border rounded">⌘K</kbd>
+            </button>
+            <button
+              onClick={() => setShowSearch(true)}
+              className="sm:hidden px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded transition-colors"
+            >
+              🔍
+            </button>
+
+            {/* Map/List toggle */}
+            <button
+              onClick={() => setViewMode((m) => (m === "map" ? "list" : "map"))}
+              className="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded transition-colors"
+              title={viewMode === "map" ? "Switch to list view" : "Switch to map view"}
+            >
+              {viewMode === "map" ? "📋" : "🗺️"}
+            </button>
+          </div>
           <div className="flex items-center gap-2 text-sm text-gray-600">
             {loading && rawCourts.length > 0 && (
               <span className="animate-pulse">Refreshing...</span>
@@ -220,18 +266,28 @@ export default function Home() {
       {/* Error banner */}
       {error && <ErrorBanner message={error} onRetry={refresh} />}
 
-      {/* Map */}
+      {/* Map or List view */}
       <div className="absolute inset-0 pt-[88px]">
-        <MapView
-          courts={courts}
-          friends={friends}
-          favourites={favourites}
-          selectedId={selectedId}
-          onSelectCourt={setSelectedId}
-          travelTimes={travelTimes}
-          mapboxToken={mapboxToken}
-          userLocation={userLocation}
-        />
+        {viewMode === "map" ? (
+          <MapView
+            courts={courts}
+            friends={friends}
+            favourites={favourites}
+            selectedId={selectedId}
+            onSelectCourt={setSelectedId}
+            travelTimes={travelTimes}
+            mapboxToken={mapboxToken}
+            userLocation={userLocation}
+          />
+        ) : (
+          <LocationList
+            courts={courts}
+            travelTimes={travelTimes}
+            favourites={favourites}
+            onSelectCourt={setSelectedId}
+            selectedId={selectedId}
+          />
+        )}
       </div>
 
       {/* Court detail panel */}
@@ -287,6 +343,17 @@ export default function Home() {
           onClose={() => setShowHistory(false)}
         />
       )}
+
+      {/* ⌘K Search */}
+      {showSearch && (
+        <CommandSearch
+          courts={courts}
+          travelTimes={travelTimes}
+          favourites={favourites}
+          onSelect={handleSearchSelect}
+          onClose={() => setShowSearch(false)}
+        />
+      )}
     </main>
   );
 }
@@ -310,7 +377,7 @@ function MenuButton({
   );
 }
 
-import { useEffect, useState as useS } from "react";
+import { useState as useS } from "react";
 
 function TimeSince({ isoString }: { isoString: string }) {
   const [, setTick] = useS(0);
