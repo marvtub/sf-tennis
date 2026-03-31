@@ -30,8 +30,8 @@ export function LocationList({
     const filtered = q
       ? courts.filter(
           (c) =>
-            c.name.toLowerCase().includes(q) ||
-            c.address.toLowerCase().includes(q)
+            (c.name ?? "").toLowerCase().includes(q) ||
+            (c.address ?? "").toLowerCase().includes(q)
         )
       : courts;
 
