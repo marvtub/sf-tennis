@@ -11,6 +11,7 @@ interface LocationListProps {
   favourites: Set<string>;
   onSelectCourt: (id: string) => void;
   selectedId: string | null;
+  loading?: boolean;
 }
 
 export function LocationList({
@@ -19,6 +20,7 @@ export function LocationList({
   favourites,
   onSelectCourt,
   selectedId,
+  loading = false,
 }: LocationListProps) {
   const [sort, setSort] = useState<SortMode>("distance");
   const [search, setSearch] = useState("");
@@ -67,6 +69,9 @@ export function LocationList({
         </div>
 
         <div className="flex items-center gap-1">
+          {loading && (
+            <span className="text-xs text-gray-400 animate-pulse">Loading distances...</span>
+          )}
           <span className="text-xs text-gray-500 mr-1">Sort:</span>
           <SortButton
             active={sort === "distance"}

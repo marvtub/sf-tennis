@@ -79,7 +79,7 @@ export function useTravelTimes(
       .catch((err) => {
         console.error("Failed to fetch travel times:", err);
       });
-  }, [courts, origin]);
+  }, [courts, origin.lat, origin.lng]);
 
   return travelTimes;
 }

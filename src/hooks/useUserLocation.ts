@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { DEFAULT_LAT, DEFAULT_LNG } from "@/lib/constants";
 
 export interface UserLocation {
@@ -38,5 +38,6 @@ export function useUserLocation(): UserLocation {
     );
   }, []);
 
-  return location;
+  // Memoize so consumers get a stable reference when lat/lng haven't changed
+  return useMemo(() => location, [location.lat, location.lng, location.isDefault]);
 }

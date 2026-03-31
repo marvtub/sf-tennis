@@ -19,12 +19,20 @@ interface D1PreparedStatement {
   run(): Promise<unknown>;
 }
 
-// In CF Workers, D1 is available via getRequestContext
+// In CF Workers, D1 is available via getCloudflareContext.
+// Dynamic import avoids bundler issues; try/catch handles local dev.
 function getDb(): D1Database | null {
   try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { env } = require("@opennextjs/cloudflare").getCloudflareContext();
-    return env.DB as D1Database;
+    // @opennextjs/cloudflare provides context at runtime in Workers
+    const mod = globalThis as unknown as {
+      __openNextCloudflare?: { getCloudflareContext: () => { env: { DB: D1Database } } };
+    };
+    if (mod.__openNextCloudflare) {
+      return mod.__openNextCloudflare.getCloudflareContext().env.DB;
+    }
+    // Fallback: require (works in current opennext versions)
+    const { getCloudflareContext } = Function('return require("@opennextjs/cloudflare")')();
+    return (getCloudflareContext().env as { DB: D1Database }).DB;
   } catch {
     return null;
   }

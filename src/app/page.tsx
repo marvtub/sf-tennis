@@ -8,21 +8,23 @@ import { useAuth } from "@/hooks/useAuth";
 import { useFavourites } from "@/hooks/useFavourites";
 import { useFriends } from "@/hooks/useFriends";
 import { useHistory } from "@/hooks/useHistory";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { TopBar } from "@/components/TopBar";
 import { MapView } from "@/components/MapView";
+import { LocationList } from "@/components/LocationList";
 import { CourtPanel } from "@/components/CourtPanel";
-import { FilterBar } from "@/components/FilterBar";
+import { CommandSearch } from "@/components/CommandSearch";
 import { LoadingSkeleton } from "@/components/LoadingSkeleton";
 import { ErrorBanner } from "@/components/ErrorBanner";
 import { LoginDialog } from "@/components/LoginDialog";
 import { AddFriendDialog } from "@/components/AddFriendDialog";
 import { AddHistoryDialog } from "@/components/AddHistoryDialog";
 import { HistoryPanel } from "@/components/HistoryPanel";
-import { CommandSearch } from "@/components/CommandSearch";
-import { LocationList } from "@/components/LocationList";
 import { applyFilter, getAvailableDates } from "@/lib/filter";
 import type { AvailabilityFilter } from "@/types";
 
 export default function Home() {
+  // Data hooks
   const { courts: rawCourts, fetchedAt, loading, error, refresh } = useCourts();
   const userLocation = useUserLocation();
   const travelTimes = useTravelTimes(rawCourts, userLocation);
@@ -31,21 +33,19 @@ export default function Home() {
   const { friends, addFriend, removeFriend } = useFriends();
   const { history, addEntry, deleteEntry } = useHistory(auth.authenticated);
 
+  // UI state
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [filter, setFilter] = useState<AvailabilityFilter>({
     date: null,
     timeFrom: null,
     timeTo: null,
   });
-
-  // Dialog states
+  const [viewMode, setViewMode] = useState<"map" | "list">("map");
+  const [showSearch, setShowSearch] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
   const [showAddFriend, setShowAddFriend] = useState(false);
   const [showAddHistory, setShowAddHistory] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
-  const [showMenu, setShowMenu] = useState(false);
-  const [showSearch, setShowSearch] = useState(false);
-  const [viewMode, setViewMode] = useState<"map" | "list">("map");
 
   // ⌘K / Ctrl+K shortcut
   const handleSearchSelect = useCallback((id: string) => {
@@ -63,9 +63,8 @@ export default function Home() {
     return () => window.removeEventListener("keydown", handleKey);
   }, []);
 
+  // Derived data
   const mapboxToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN ?? "";
-
-  // Apply filters
   const availableDates = useMemo(
     () => getAvailableDates(rawCourts),
     [rawCourts]
@@ -94,171 +93,26 @@ export default function Home() {
 
   return (
     <main className="relative h-screen w-screen overflow-hidden">
-      {/* Top status bar */}
-      <div className="absolute top-0 left-0 right-0 z-10 bg-white/90 backdrop-blur-sm border-b shadow-sm">
-        <div className="flex items-center justify-between px-4 py-2">
-          <div className="flex items-center gap-2">
-            <h1 className="text-lg font-bold">🎾 SF Tennis Courts</h1>
-
-            {/* Search button */}
-            <button
-              onClick={() => setShowSearch(true)}
-              className="hidden sm:flex items-center gap-2 px-3 py-1 text-xs text-gray-400 bg-gray-100 hover:bg-gray-200 border rounded-lg transition-colors"
-            >
-              🔍 Search
-              <kbd className="px-1 py-0.5 text-[10px] font-medium bg-white border rounded">⌘K</kbd>
-            </button>
-            <button
-              onClick={() => setShowSearch(true)}
-              className="sm:hidden px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded transition-colors"
-            >
-              🔍
-            </button>
-
-            {/* Map/List toggle */}
-            <button
-              onClick={() => setViewMode((m) => (m === "map" ? "list" : "map"))}
-              className="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded transition-colors"
-              title={viewMode === "map" ? "Switch to list view" : "Switch to map view"}
-            >
-              {viewMode === "map" ? "📋" : "🗺️"}
-            </button>
-          </div>
-          <div className="flex items-center gap-2 text-sm text-gray-600">
-            {loading && rawCourts.length > 0 && (
-              <span className="animate-pulse">Refreshing...</span>
-            )}
-            {fetchedAt && !loading && <TimeSince isoString={fetchedAt} />}
-
-            {/* Auth-gated refresh */}
-            {auth.authenticated && (
-              <button
-                onClick={refresh}
-                disabled={loading}
-                className="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded disabled:opacity-50 transition-colors"
-              >
-                ↻
-              </button>
-            )}
-
-            {/* Legend (desktop) */}
-            <div className="hidden md:flex items-center gap-2 ml-2 border-l pl-3">
-              <span className="flex items-center gap-1">
-                <span className="w-3 h-3 rounded-full bg-green-500 inline-block" />
-                Today
-              </span>
-              <span className="flex items-center gap-1">
-                <span className="w-3 h-3 rounded-full bg-yellow-500 inline-block" />
-                Later
-              </span>
-              <span className="flex items-center gap-1">
-                <span className="w-3 h-3 rounded-full bg-red-500 inline-block" />
-                Full
-              </span>
-            </div>
-
-            {/* Menu button */}
-            <div className="relative ml-2">
-              <button
-                onClick={() => setShowMenu(!showMenu)}
-                className="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded transition-colors"
-              >
-                ☰
-              </button>
-
-              {showMenu && (
-                <>
-                  <div
-                    className="fixed inset-0 z-[55]"
-                    onClick={() => setShowMenu(false)}
-                  />
-                  <div className="absolute right-0 top-8 z-[60] bg-white rounded-lg shadow-xl border py-1 w-48">
-                    {auth.authenticated ? (
-                      <>
-                        <MenuButton
-                          onClick={() => {
-                            setShowAddFriend(true);
-                            setShowMenu(false);
-                          }}
-                        >
-                          👤 Add Friend
-                        </MenuButton>
-                        <MenuButton
-                          onClick={() => {
-                            setShowAddHistory(true);
-                            setShowMenu(false);
-                          }}
-                        >
-                          🎾 Log Match
-                        </MenuButton>
-                        <MenuButton
-                          onClick={() => {
-                            setShowHistory(true);
-                            setShowMenu(false);
-                          }}
-                        >
-                          📋 Match History
-                        </MenuButton>
-                        {friends.length > 0 && (
-                          <>
-                            <div className="border-t my-1" />
-                            <div className="px-3 py-1 text-xs text-gray-400 font-medium">
-                              Friends
-                            </div>
-                            {friends.map((f) => (
-                              <div
-                                key={f.id}
-                                className="flex items-center justify-between px-3 py-1.5 text-sm"
-                              >
-                                <span>
-                                  {f.emoji} {f.name}
-                                </span>
-                                <button
-                                  onClick={() => removeFriend(f.id)}
-                                  className="text-gray-300 hover:text-red-500 text-xs"
-                                >
-                                  ✕
-                                </button>
-                              </div>
-                            ))}
-                          </>
-                        )}
-                        <div className="border-t my-1" />
-                        <MenuButton
-                          onClick={() => {
-                            auth.logout();
-                            setShowMenu(false);
-                          }}
-                        >
-                          🔓 Logout
-                        </MenuButton>
-                      </>
-                    ) : (
-                      <MenuButton
-                        onClick={() => {
-                          setShowLogin(true);
-                          setShowMenu(false);
-                        }}
-                      >
-                        🔐 Login
-                      </MenuButton>
-                    )}
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Filter bar */}
-        <div className="px-4 pb-2">
-          <FilterBar
-            filter={filter}
-            onChange={setFilter}
-            availableDates={availableDates}
-          />
-        </div>
-      </div>
+      <TopBar
+        loading={loading}
+        hasData={rawCourts.length > 0}
+        fetchedAt={fetchedAt}
+        authenticated={auth.authenticated}
+        filter={filter}
+        onFilterChange={setFilter}
+        availableDates={availableDates}
+        friends={friends}
+        viewMode={viewMode}
+        onRefresh={refresh}
+        onToggleView={() => setViewMode((m) => (m === "map" ? "list" : "map"))}
+        onShowSearch={() => setShowSearch(true)}
+        onShowLogin={() => setShowLogin(true)}
+        onShowAddFriend={() => setShowAddFriend(true)}
+        onShowAddHistory={() => setShowAddHistory(true)}
+        onShowHistory={() => setShowHistory(true)}
+        onLogout={auth.logout}
+        onRemoveFriend={removeFriend}
+      />
 
       {/* Loading state */}
       {loading && rawCourts.length === 0 && <LoadingSkeleton />}
@@ -266,28 +120,31 @@ export default function Home() {
       {/* Error banner */}
       {error && <ErrorBanner message={error} onRetry={refresh} />}
 
-      {/* Map or List view */}
+      {/* Main content with error boundary */}
       <div className="absolute inset-0 pt-[88px]">
-        {viewMode === "map" ? (
-          <MapView
-            courts={courts}
-            friends={friends}
-            favourites={favourites}
-            selectedId={selectedId}
-            onSelectCourt={setSelectedId}
-            travelTimes={travelTimes}
-            mapboxToken={mapboxToken}
-            userLocation={userLocation}
-          />
-        ) : (
-          <LocationList
-            courts={courts}
-            travelTimes={travelTimes}
-            favourites={favourites}
-            onSelectCourt={setSelectedId}
-            selectedId={selectedId}
-          />
-        )}
+        <ErrorBoundary>
+          {viewMode === "map" ? (
+            <MapView
+              courts={courts}
+              friends={friends}
+              favourites={favourites}
+              selectedId={selectedId}
+              onSelectCourt={setSelectedId}
+              travelTimes={travelTimes}
+              mapboxToken={mapboxToken}
+              userLocation={userLocation}
+            />
+          ) : (
+            <LocationList
+              courts={courts}
+              travelTimes={travelTimes}
+              favourites={favourites}
+              onSelectCourt={setSelectedId}
+              selectedId={selectedId}
+              loading={travelTimes.size === 0 && rawCourts.length > 0}
+            />
+          )}
+        </ErrorBoundary>
       </div>
 
       {/* Court detail panel */}
@@ -356,44 +213,4 @@ export default function Home() {
       )}
     </main>
   );
-}
-
-// ── Helpers ──
-
-function MenuButton({
-  children,
-  onClick,
-}: {
-  children: React.ReactNode;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      className="w-full text-left px-3 py-1.5 text-sm hover:bg-gray-50 transition-colors"
-    >
-      {children}
-    </button>
-  );
-}
-
-import { useState as useS } from "react";
-
-function TimeSince({ isoString }: { isoString: string }) {
-  const [, setTick] = useS(0);
-
-  useEffect(() => {
-    const interval = setInterval(() => setTick((t) => t + 1), 10000);
-    return () => clearInterval(interval);
-  }, []);
-
-  const seconds = Math.round(
-    (Date.now() - new Date(isoString).getTime()) / 1000
-  );
-  let label: string;
-  if (seconds < 60) label = `${seconds}s ago`;
-  else if (seconds < 3600) label = `${Math.round(seconds / 60)}m ago`;
-  else label = `${Math.round(seconds / 3600)}h ago`;
-
-  return <span className="text-gray-500">Updated {label}</span>;
 }
