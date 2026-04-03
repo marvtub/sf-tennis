@@ -21,6 +21,14 @@ export function useUserLocation(cityId: CityId = DEFAULT_CITY): UserLocation {
     lng: city.lng,
     isDefault: true,
   });
+  const [geoResolved, setGeoResolved] = useState(false);
+
+  // Update fallback when city changes (only if geolocation hasn't resolved)
+  useEffect(() => {
+    if (!geoResolved) {
+      setLocation({ lat: city.lat, lng: city.lng, isDefault: true });
+    }
+  }, [cityId, city.lat, city.lng, geoResolved]);
 
   useEffect(() => {
     if (!navigator.geolocation) return;
@@ -32,6 +40,7 @@ export function useUserLocation(cityId: CityId = DEFAULT_CITY): UserLocation {
           lng: pos.coords.longitude,
           isDefault: false,
         });
+        setGeoResolved(true);
       },
       () => {
         // Denied or error — keep default, no-op

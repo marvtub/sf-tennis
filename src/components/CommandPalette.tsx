@@ -97,6 +97,29 @@ export function CommandPalette({
           filterValue: { ...filter, date: d },
         });
       }
+
+      // Time-of-day shortcuts
+      const timePresets: { id: string; label: string; from: string; to: string }[] = [
+        { id: "morning", label: "🌅 Morning (7–12)", from: "07:00", to: "12:00" },
+        { id: "afternoon", label: "☀️ Afternoon (12–17)", from: "12:00", to: "17:00" },
+        { id: "evening", label: "🌆 Evening (17–21)", from: "17:00", to: "21:00" },
+      ];
+      result.push({
+        type: "filter",
+        id: "time-any",
+        label: "Any time",
+        active: !filter.timeFrom && !filter.timeTo,
+        filterValue: { ...filter, timeFrom: null, timeTo: null },
+      });
+      for (const tp of timePresets) {
+        result.push({
+          type: "filter",
+          id: `time-${tp.id}`,
+          label: tp.label,
+          active: filter.timeFrom === tp.from && filter.timeTo === tp.to,
+          filterValue: { ...filter, timeFrom: tp.from, timeTo: tp.to },
+        });
+      }
     }
 
     // Courts — always shown, filtered by query
@@ -218,10 +241,20 @@ export function CommandPalette({
               <Pill
                 active
                 onRemove={() =>
-                  onFilterChange({ date: null, timeFrom: null, timeTo: null })
+                  onFilterChange({ ...filter, date: null })
                 }
               >
                 {formatDateLabel(filter.date)}
+              </Pill>
+            )}
+            {filter.timeFrom && (
+              <Pill
+                active
+                onRemove={() =>
+                  onFilterChange({ ...filter, timeFrom: null, timeTo: null })
+                }
+              >
+                {filter.timeFrom}–{filter.timeTo ?? ""}
               </Pill>
             )}
             <span className="text-xs text-gray-400 ml-1">
@@ -240,12 +273,15 @@ export function CommandPalette({
             items.map((item, i) => {
               // Section headers
               let header: string | null = null;
-              if (item.type !== lastType) {
-                lastType = item.type;
-                if (item.type === "city") header = "📍 City";
-                else if (item.type === "sport") header = "🏅 Sport";
-                else if (item.type === "filter") header = "📅 Day";
-                else if (item.type === "court")
+              const itemKey = item.type === "filter" && item.id.startsWith("time-")
+                ? "time" : item.type;
+              if (itemKey !== lastType) {
+                lastType = itemKey;
+                if (itemKey === "city") header = "📍 City";
+                else if (itemKey === "sport") header = "🏅 Sport";
+                else if (itemKey === "filter") header = "📅 Day";
+                else if (itemKey === "time") header = "⏰ Time";
+                else if (itemKey === "court")
                   header = query ? "Courts" : "🏟️ Courts";
               }
 
