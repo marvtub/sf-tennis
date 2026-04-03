@@ -1,22 +1,24 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { DEFAULT_LAT, DEFAULT_LNG } from "@/lib/constants";
+import { CITIES, DEFAULT_CITY } from "@/lib/constants";
+import type { CityId } from "@/lib/constants";
 
 export interface UserLocation {
   lat: number;
   lng: number;
-  isDefault: boolean; // true = fallback to generic SF center
+  isDefault: boolean; // true = fallback to city center
 }
 
 /**
  * One-shot browser geolocation.
- * Falls back silently to SF city center on denial or error.
+ * Falls back silently to city center on denial or error.
  */
-export function useUserLocation(): UserLocation {
+export function useUserLocation(cityId: CityId = DEFAULT_CITY): UserLocation {
+  const city = CITIES[cityId] ?? CITIES[DEFAULT_CITY];
   const [location, setLocation] = useState<UserLocation>({
-    lat: DEFAULT_LAT,
-    lng: DEFAULT_LNG,
+    lat: city.lat,
+    lng: city.lng,
     isDefault: true,
   });
 

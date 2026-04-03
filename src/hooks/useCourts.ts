@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import type { CourtLocation } from "@/types";
-import type { Sport } from "@/lib/constants";
+import type { Sport, CityId } from "@/lib/constants";
 
 interface CourtsData {
   courts: CourtLocation[];
@@ -12,7 +12,7 @@ interface CourtsData {
   refresh: () => void;
 }
 
-export function useCourts(sport: Sport = "tennis"): CourtsData {
+export function useCourts(sport: Sport = "tennis", city: CityId = "sf"): CourtsData {
   const [courts, setCourts] = useState<CourtLocation[]>([]);
   const [fetchedAt, setFetchedAt] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -22,7 +22,7 @@ export function useCourts(sport: Sport = "tennis"): CourtsData {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`/api/courts?sport=${sport}`);
+      const res = await fetch(`/api/courts?sport=${sport}&city=${city}`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       setCourts(data.courts);
@@ -32,7 +32,7 @@ export function useCourts(sport: Sport = "tennis"): CourtsData {
     } finally {
       setLoading(false);
     }
-  }, [sport]);
+  }, [sport, city]);
 
   useEffect(() => {
     fetchCourts();

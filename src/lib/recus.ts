@@ -20,9 +20,10 @@ import type {
  * theoretical schedule slots, not actual availability. We must use the
  * per-site endpoint for each court to get real data.
  */
-export async function fetchAllCourts(): Promise<CourtLocation[]> {
+export async function fetchAllCourts(orgSlug?: string): Promise<CourtLocation[]> {
   // Step 1: Get all locations + court metadata from bulk endpoint
-  const bulkUrl = `${RECUS_API_BASE}/v1/locations/availability?organizationSlug=san-francisco-rec-park&publishedSites=true`;
+  const slug = orgSlug || "san-francisco-rec-park";
+  const bulkUrl = `${RECUS_API_BASE}/v1/locations/availability?organizationSlug=${slug}&publishedSites=true`;
   const bulkRes = await fetch(bulkUrl, { headers: RECUS_HEADERS });
 
   if (!bulkRes.ok) {

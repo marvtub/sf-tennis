@@ -5,6 +5,8 @@ import Map, { Marker, NavigationControl } from "react-map-gl/mapbox";
 import "mapbox-gl/dist/mapbox-gl.css";
 import type { CourtLocation, TravelTime, Friend } from "@/types";
 import type { UserLocation } from "@/hooks/useUserLocation";
+import type { CityId } from "@/lib/constants";
+import { CITIES, DEFAULT_CITY } from "@/lib/constants";
 import { CourtPin, HomePin, FriendPin } from "./CourtPin";
 import { TravelBadgeMini } from "./TravelBadge";
 
@@ -17,6 +19,7 @@ interface MapViewProps {
   travelTimes: Map<string, TravelTime>;
   mapboxToken: string;
   userLocation: UserLocation;
+  city: CityId;
 }
 
 export function MapView({
@@ -28,11 +31,13 @@ export function MapView({
   travelTimes,
   mapboxToken,
   userLocation,
+  city,
 }: MapViewProps) {
+  const cityConfig = CITIES[city] ?? CITIES[DEFAULT_CITY];
   const [viewState, setViewState] = useState({
-    latitude: userLocation.lat,
-    longitude: userLocation.lng,
-    zoom: 12.5,
+    latitude: userLocation.isDefault ? cityConfig.lat : userLocation.lat,
+    longitude: userLocation.isDefault ? cityConfig.lng : userLocation.lng,
+    zoom: cityConfig.zoom,
   });
 
   // Re-center when user location resolves from geolocation
@@ -44,6 +49,19 @@ export function MapView({
       longitude: userLocation.lng,
     }));
     setHasCentered(true);
+  }
+
+  // Re-center when city changes
+  const [lastCity, setLastCity] = useState(city);
+  if (city !== lastCity) {
+    const c = CITIES[city] ?? CITIES[DEFAULT_CITY];
+    setViewState((prev) => ({
+      ...prev,
+      latitude: c.lat,
+      longitude: c.lng,
+      zoom: c.zoom,
+    }));
+    setLastCity(city);
   }
 
   const handleMapClick = useCallback(() => {

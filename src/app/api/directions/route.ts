@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { DEFAULT_LAT, DEFAULT_LNG, DIRECTIONS_CACHE_SECONDS } from "@/lib/constants";
+import { CITIES, DEFAULT_CITY, DIRECTIONS_CACHE_SECONDS } from "@/lib/constants";
 import type { TravelTime } from "@/types";
 
 /**
@@ -20,8 +20,9 @@ export async function GET(request: NextRequest) {
 
   // Parse optional origin; fall back to hardcoded home
   const originParam = request.nextUrl.searchParams.get("origin");
-  let originLat = DEFAULT_LAT;
-  let originLng = DEFAULT_LNG;
+  const defaultCity = CITIES[DEFAULT_CITY];
+  let originLat = defaultCity.lat;
+  let originLng = defaultCity.lng;
   if (originParam) {
     const [lat, lng] = originParam.split(",").map(Number);
     if (Number.isFinite(lat) && Number.isFinite(lng)) {

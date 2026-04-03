@@ -13,7 +13,7 @@ import { TopBar } from "@/components/TopBar";
 import { MapView } from "@/components/MapView";
 import { LocationList } from "@/components/LocationList";
 import { CourtPanel } from "@/components/CourtPanel";
-import { CommandSearch } from "@/components/CommandSearch";
+import { CommandPalette } from "@/components/CommandPalette";
 import { LoadingSkeleton } from "@/components/LoadingSkeleton";
 import { ErrorBanner } from "@/components/ErrorBanner";
 import { LoginDialog } from "@/components/LoginDialog";
@@ -22,19 +22,25 @@ import { AddHistoryDialog } from "@/components/AddHistoryDialog";
 import { HistoryPanel } from "@/components/HistoryPanel";
 import { applyFilter, getAvailableDates } from "@/lib/filter";
 import type { AvailabilityFilter } from "@/types";
-import type { Sport } from "@/lib/constants";
+import type { Sport, CityId } from "@/lib/constants";
 
 export default function Home() {
-  // Sport toggle — clear selection when switching
+  // City + Sport — clear selection when switching
+  const [city, setCity] = useState<CityId>("sf");
   const [sport, setSport] = useState<Sport>("tennis");
+
+  const handleCityChange = useCallback((c: CityId) => {
+    setCity(c);
+    setSelectedId(null);
+  }, []);
   const handleSportChange = useCallback((s: Sport) => {
     setSport(s);
     setSelectedId(null);
   }, []);
 
   // Data hooks
-  const { courts: rawCourts, fetchedAt, loading, error, refresh } = useCourts(sport);
-  const userLocation = useUserLocation();
+  const { courts: rawCourts, fetchedAt, loading, error, refresh } = useCourts(sport, city);
+  const userLocation = useUserLocation(city);
   const travelTimes = useTravelTimes(rawCourts, userLocation);
   const auth = useAuth();
   const { favourites, toggleFavourite } = useFavourites();
@@ -56,10 +62,6 @@ export default function Home() {
   const [showHistory, setShowHistory] = useState(false);
 
   // ⌘K / Ctrl+K shortcut
-  const handleSearchSelect = useCallback((id: string) => {
-    setSelectedId(id);
-  }, []);
-
   useEffect(() => {
     function handleKey(e: KeyboardEvent) {
       if ((e.metaKey || e.ctrlKey) && e.key === "k") {
@@ -87,12 +89,9 @@ export default function Home() {
     return (
       <main className="flex min-h-screen items-center justify-center">
         <div className="text-center p-8">
-          <h1 className="text-2xl font-bold mb-4">🎾 SF Tennis Courts</h1>
+          <h1 className="text-2xl font-bold mb-4">🎾 Court Finder</h1>
           <p className="text-red-600">
             Missing NEXT_PUBLIC_MAPBOX_TOKEN environment variable.
-          </p>
-          <p className="text-gray-500 mt-2 text-sm">
-            Add it to <code>.env.local</code> and restart the dev server.
           </p>
         </div>
       </main>
@@ -106,13 +105,11 @@ export default function Home() {
         hasData={rawCourts.length > 0}
         fetchedAt={fetchedAt}
         authenticated={auth.authenticated}
-        filter={filter}
-        onFilterChange={setFilter}
-        availableDates={availableDates}
         friends={friends}
         viewMode={viewMode}
         sport={sport}
-        onSportChange={handleSportChange}
+        city={city}
+        courtCount={courts.length}
         onRefresh={refresh}
         onToggleView={() => setViewMode((m) => (m === "map" ? "list" : "map"))}
         onShowSearch={() => setShowSearch(true)}
@@ -130,8 +127,8 @@ export default function Home() {
       {/* Error banner */}
       {error && <ErrorBanner message={error} onRetry={refresh} />}
 
-      {/* Main content with error boundary */}
-      <div className="absolute inset-0 pt-[88px]">
+      {/* Main content — single row top bar = 48px */}
+      <div className="absolute inset-0 pt-12">
         <ErrorBoundary>
           {viewMode === "map" ? (
             <MapView
@@ -143,6 +140,7 @@ export default function Home() {
               travelTimes={travelTimes}
               mapboxToken={mapboxToken}
               userLocation={userLocation}
+              city={city}
             />
           ) : (
             <LocationList
@@ -184,7 +182,6 @@ export default function Home() {
           onClose={() => setShowLogin(false)}
         />
       )}
-
       {showAddFriend && (
         <AddFriendDialog
           onAdd={addFriend}
@@ -192,7 +189,6 @@ export default function Home() {
           mapboxToken={mapboxToken}
         />
       )}
-
       {showAddHistory && (
         <AddHistoryDialog
           locations={rawCourts}
@@ -201,7 +197,6 @@ export default function Home() {
           onClose={() => setShowAddHistory(false)}
         />
       )}
-
       {showHistory && (
         <HistoryPanel
           history={history}
@@ -211,13 +206,22 @@ export default function Home() {
         />
       )}
 
-      {/* ⌘K Search */}
+      {/* ⌘K Command Palette */}
       {showSearch && (
-        <CommandSearch
+        <CommandPalette
           courts={courts}
           travelTimes={travelTimes}
           favourites={favourites}
-          onSelect={handleSearchSelect}
+          sport={sport}
+          city={city}
+          filter={filter}
+          availableDates={availableDates}
+          onSelectCourt={(id) => {
+            setSelectedId(id);
+          }}
+          onSportChange={handleSportChange}
+          onCityChange={handleCityChange}
+          onFilterChange={setFilter}
           onClose={() => setShowSearch(false)}
         />
       )}

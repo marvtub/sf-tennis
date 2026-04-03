@@ -1,9 +1,36 @@
-// Default map center: San Francisco (generic, no personal address)
-export const DEFAULT_LAT = 37.7749;
-export const DEFAULT_LNG = -122.4194;
-
 export const RECUS_API_BASE = "https://api.rec.us";
-export const RECUS_ORG_SLUG = "san-francisco-rec-park";
+
+// City configurations
+export interface CityConfig {
+  slug: string;
+  label: string;
+  shortLabel: string;
+  lat: number;
+  lng: number;
+  zoom: number;
+}
+
+export const CITIES: Record<string, CityConfig> = {
+  sf: {
+    slug: "san-francisco-rec-park",
+    label: "San Francisco",
+    shortLabel: "SF",
+    lat: 37.7749,
+    lng: -122.4194,
+    zoom: 12.5,
+  },
+  "mountain-view": {
+    slug: "city-of-mountain-view",
+    label: "Mountain View",
+    shortLabel: "MV",
+    lat: 37.3861,
+    lng: -122.0839,
+    zoom: 13.5,
+  },
+};
+
+export type CityId = keyof typeof CITIES;
+export const DEFAULT_CITY: CityId = "sf";
 
 // Required headers to avoid CORS issues when proxying rec.us
 export const RECUS_HEADERS = {

@@ -1,23 +1,21 @@
 "use client";
 
 import { useState } from "react";
-import { FilterBar } from "./FilterBar";
 import { TimeSince } from "./TimeSince";
-import type { AvailabilityFilter, Friend } from "@/types";
-import type { Sport } from "@/lib/constants";
+import type { Friend } from "@/types";
+import type { Sport, CityId } from "@/lib/constants";
+import { CITIES } from "@/lib/constants";
 
 interface TopBarProps {
   loading: boolean;
   hasData: boolean;
   fetchedAt: string | null;
   authenticated: boolean;
-  filter: AvailabilityFilter;
-  onFilterChange: (filter: AvailabilityFilter) => void;
-  availableDates: string[];
   friends: Friend[];
   viewMode: "map" | "list";
   sport: Sport;
-  onSportChange: (sport: Sport) => void;
+  city: CityId;
+  courtCount: number;
   onRefresh: () => void;
   onToggleView: () => void;
   onShowSearch: () => void;
@@ -34,13 +32,11 @@ export function TopBar({
   hasData,
   fetchedAt,
   authenticated,
-  filter,
-  onFilterChange,
-  availableDates,
   friends,
   viewMode,
   sport,
-  onSportChange,
+  city,
+  courtCount,
   onRefresh,
   onToggleView,
   onShowSearch,
@@ -52,44 +48,27 @@ export function TopBar({
   onRemoveFriend,
 }: TopBarProps) {
   const [showMenu, setShowMenu] = useState(false);
+  const cityConfig = CITIES[city];
+  const sportEmoji = sport === "tennis" ? "🎾" : "🏓";
+  const sportLabel = sport === "tennis" ? "Tennis" : "Pickleball";
 
   return (
     <div className="absolute top-0 left-0 right-0 z-10 bg-white/90 backdrop-blur-sm border-b shadow-sm">
-      <div className="flex items-center justify-between px-4 py-2">
-        <div className="flex items-center gap-2">
-          <h1 className="text-lg font-bold">
-            {sport === "tennis" ? "🎾" : "🏓"} SF {sport === "tennis" ? "Tennis" : "Pickleball"} Courts
+      <div className="flex items-center justify-between px-4 py-2.5">
+        {/* Left: title + search trigger */}
+        <div className="flex items-center gap-2 min-w-0">
+          <h1 className="text-base font-bold truncate">
+            {sportEmoji} {cityConfig?.shortLabel ?? city} {sportLabel}
           </h1>
+          <span className="text-xs text-gray-400 hidden sm:inline">
+            · {courtCount} court{courtCount !== 1 ? "s" : ""}
+          </span>
 
-          {/* Sport toggle */}
-          <div className="flex bg-gray-100 rounded-lg p-0.5">
-            <button
-              onClick={() => onSportChange("tennis")}
-              className={`px-2 py-1 text-xs rounded-md transition-colors ${
-                sport === "tennis"
-                  ? "bg-white shadow-sm font-medium text-gray-900"
-                  : "text-gray-500 hover:text-gray-700"
-              }`}
-            >
-              🎾 Tennis
-            </button>
-            <button
-              onClick={() => onSportChange("pickleball")}
-              className={`px-2 py-1 text-xs rounded-md transition-colors ${
-                sport === "pickleball"
-                  ? "bg-white shadow-sm font-medium text-gray-900"
-                  : "text-gray-500 hover:text-gray-700"
-              }`}
-            >
-              🏓 Pickleball
-            </button>
-          </div>
-
-          {/* Search button */}
+          {/* Search trigger */}
           <button
             onClick={onShowSearch}
             aria-label="Search courts"
-            className="hidden sm:flex items-center gap-2 px-3 py-1 text-xs text-gray-400 bg-gray-100 hover:bg-gray-200 border rounded-lg transition-colors"
+            className="hidden sm:flex items-center gap-2 px-3 py-1 text-xs text-gray-400 bg-gray-100 hover:bg-gray-200 border rounded-lg transition-colors ml-1"
           >
             🔍 Search
             <kbd className="px-1 py-0.5 text-[10px] font-medium bg-white border rounded">
@@ -103,24 +82,18 @@ export function TopBar({
           >
             🔍
           </button>
-
-          {/* Map/List toggle */}
-          <button
-            onClick={onToggleView}
-            className="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded transition-colors"
-            aria-label={
-              viewMode === "map" ? "Switch to list view" : "Switch to map view"
-            }
-          >
-            {viewMode === "map" ? "📋" : "🗺️"}
-          </button>
         </div>
 
-        <div className="flex items-center gap-2 text-sm text-gray-600">
+        {/* Right: controls */}
+        <div className="flex items-center gap-1.5 text-sm text-gray-600 flex-shrink-0">
           {loading && hasData && (
-            <span className="animate-pulse">Refreshing...</span>
+            <span className="animate-pulse text-xs">Refreshing...</span>
           )}
-          {fetchedAt && !loading && <TimeSince isoString={fetchedAt} />}
+          {fetchedAt && !loading && (
+            <span className="hidden sm:inline">
+              <TimeSince isoString={fetchedAt} />
+            </span>
+          )}
 
           {/* Auth-gated refresh */}
           {authenticated && (
@@ -134,24 +107,19 @@ export function TopBar({
             </button>
           )}
 
-          {/* Legend (desktop) */}
-          <div className="hidden md:flex items-center gap-2 ml-2 border-l pl-3">
-            <span className="flex items-center gap-1">
-              <span className="w-3 h-3 rounded-full bg-green-500 inline-block" />
-              Today
-            </span>
-            <span className="flex items-center gap-1">
-              <span className="w-3 h-3 rounded-full bg-yellow-500 inline-block" />
-              Later
-            </span>
-            <span className="flex items-center gap-1">
-              <span className="w-3 h-3 rounded-full bg-red-500 inline-block" />
-              Full
-            </span>
-          </div>
+          {/* Map/List toggle */}
+          <button
+            onClick={onToggleView}
+            className="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded transition-colors"
+            aria-label={
+              viewMode === "map" ? "Switch to list view" : "Switch to map view"
+            }
+          >
+            {viewMode === "map" ? "📋" : "🗺️"}
+          </button>
 
           {/* Menu button */}
-          <div className="relative ml-2">
+          <div className="relative">
             <button
               onClick={() => setShowMenu(!showMenu)}
               aria-label="Menu"
@@ -242,15 +210,6 @@ export function TopBar({
             )}
           </div>
         </div>
-      </div>
-
-      {/* Filter bar */}
-      <div className="px-4 pb-2">
-        <FilterBar
-          filter={filter}
-          onChange={onFilterChange}
-          availableDates={availableDates}
-        />
       </div>
     </div>
   );

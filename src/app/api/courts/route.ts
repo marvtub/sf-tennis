@@ -4,8 +4,10 @@ import {
   AVAILABILITY_CACHE_SECONDS,
   SPORT_ID_TENNIS,
   SPORT_ID_PICKLEBALL,
+  CITIES,
+  DEFAULT_CITY,
 } from "@/lib/constants";
-import type { Sport } from "@/lib/constants";
+import type { Sport, CityId } from "@/lib/constants";
 
 const SPORT_IDS: Record<Sport, string> = {
   tennis: SPORT_ID_TENNIS,
@@ -13,8 +15,7 @@ const SPORT_IDS: Record<Sport, string> = {
 };
 
 /**
- * GET /api/courts?sport=tennis|pickleball
- * Defaults to tennis if not specified.
+ * GET /api/courts?sport=tennis|pickleball&city=sf|mountain-view
  */
 export async function GET(request: NextRequest) {
   try {
@@ -22,49 +23,44 @@ export async function GET(request: NextRequest) {
     const sport: Sport = sportParam === "pickleball" ? "pickleball" : "tennis";
     const sportId = SPORT_IDS[sport];
 
-    const allCourts = await fetchAllCourts();
+    const cityParam = request.nextUrl.searchParams.get("city") as CityId | null;
+    const cityId: CityId = cityParam && cityParam in CITIES ? cityParam : DEFAULT_CITY;
+    const city = CITIES[cityId];
+
+    const allCourts = await fetchAllCourts(city.slug);
 
     // Filter each location's courts by sport, then drop locations with no matching courts
+    const todayStr = new Date().toLocaleDateString("en-CA", {
+      timeZone: "America/Los_Angeles",
+    });
+
     const courts = allCourts
-      .map((loc) => ({
-        ...loc,
-        courts: loc.courts.filter((c) => c.sportId === sportId),
-      }))
-      .filter((loc) => loc.courts.length > 0)
       .map((loc) => {
-        // Recompute availability stats after filtering
-        const todayStr = new Date().toLocaleDateString("en-CA", {
-          timeZone: "America/Los_Angeles",
-        });
-        const totalSlotsToday = loc.courts.reduce(
+        const filtered = loc.courts.filter((c) => c.sportId === sportId);
+        const totalSlotsToday = filtered.reduce(
           (sum, c) =>
             sum + c.availableSlots.filter((s) => s.date === todayStr).length,
           0
         );
-        const totalSlotsWeek = loc.courts.reduce(
+        const totalSlotsWeek = filtered.reduce(
           (sum, c) => sum + c.availableSlots.length,
           0
         );
-        const availabilityStatus =
-          totalSlotsToday > 0
-            ? "available"
-            : totalSlotsWeek > 0
-            ? "later"
-            : "full";
+        const availabilityStatus: "available" | "later" | "full" =
+          totalSlotsToday > 0 ? "available" : totalSlotsWeek > 0 ? "later" : "full";
 
         return {
           ...loc,
+          courts: filtered,
           totalSlotsToday,
           totalSlotsWeek,
-          availabilityStatus: availabilityStatus as
-            | "available"
-            | "later"
-            | "full",
+          availabilityStatus,
         };
-      });
+      })
+      .filter((loc) => loc.courts.length > 0);
 
     return NextResponse.json(
-      { courts, sport, fetchedAt: new Date().toISOString() },
+      { courts, sport, city: cityId, fetchedAt: new Date().toISOString() },
       {
         headers: {
           "Cache-Control": `s-maxage=${AVAILABILITY_CACHE_SECONDS}, stale-while-revalidate=300`,
