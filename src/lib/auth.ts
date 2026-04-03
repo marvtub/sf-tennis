@@ -17,7 +17,14 @@ export async function isAuthenticated(): Promise<boolean> {
       Buffer.from(session.value, "base64").toString()
     );
     const age = Date.now() / 1000 - ts;
-    return age < SESSION_DURATION && pin === process.env.AUTH_PIN;
+    // Timing-safe comparison for PIN
+    const expected = process.env.AUTH_PIN;
+    if (!expected || pin.length !== expected.length) return false;
+    let match = 0;
+    for (let i = 0; i < pin.length; i++) {
+      match |= pin.charCodeAt(i) ^ expected.charCodeAt(i);
+    }
+    return age < SESSION_DURATION && match === 0;
   } catch {
     return false;
   }

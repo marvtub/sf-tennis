@@ -25,8 +25,12 @@ import type { AvailabilityFilter } from "@/types";
 import type { Sport } from "@/lib/constants";
 
 export default function Home() {
-  // Sport toggle
+  // Sport toggle — clear selection when switching
   const [sport, setSport] = useState<Sport>("tennis");
+  const handleSportChange = useCallback((s: Sport) => {
+    setSport(s);
+    setSelectedId(null);
+  }, []);
 
   // Data hooks
   const { courts: rawCourts, fetchedAt, loading, error, refresh } = useCourts(sport);
@@ -108,7 +112,7 @@ export default function Home() {
         friends={friends}
         viewMode={viewMode}
         sport={sport}
-        onSportChange={setSport}
+        onSportChange={handleSportChange}
         onRefresh={refresh}
         onToggleView={() => setViewMode((m) => (m === "map" ? "list" : "map"))}
         onShowSearch={() => setShowSearch(true)}

@@ -40,9 +40,18 @@ export async function GET(request: NextRequest) {
 
   const locations = locationsParam.split("|").map((entry) => {
     const [id, coords] = entry.split(":");
+    if (!coords) return null;
     const [lat, lng] = coords.split(",").map(Number);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
     return { id, lat, lng };
-  });
+  }).filter((loc): loc is { id: string; lat: number; lng: number } => loc !== null);
+
+  if (locations.length === 0) {
+    return NextResponse.json(
+      { error: "No valid locations" },
+      { status: 400 }
+    );
+  }
 
   const results: TravelTime[] = await Promise.all(
     locations.map(async (loc) => {

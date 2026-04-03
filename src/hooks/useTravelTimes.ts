@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import type { CourtLocation, TravelTime } from "@/types";
 import type { UserLocation } from "@/hooks/useUserLocation";
 
-const CACHE_PREFIX = "sf-tennis-travel-times";
+const CACHE_PREFIX = "sf-travel-times";
 const CACHE_DURATION_MS = 24 * 60 * 60 * 1000; // 24 hours
 
 interface CachedData {
@@ -12,11 +12,16 @@ interface CachedData {
   cachedAt: number;
 }
 
-function cacheKey(origin: UserLocation): string {
+function cacheKey(origin: UserLocation, courtIds: string): string {
   // Round to ~100m precision so tiny GPS jitter doesn't bust the cache
   const lat = origin.lat.toFixed(3);
   const lng = origin.lng.toFixed(3);
-  return `${CACHE_PREFIX}:${lat},${lng}`;
+  // Include hash of court IDs so sport toggle busts cache correctly
+  let hash = 0;
+  for (let i = 0; i < courtIds.length; i++) {
+    hash = ((hash << 5) - hash + courtIds.charCodeAt(i)) | 0;
+  }
+  return `${CACHE_PREFIX}:${lat},${lng}:${hash}`;
 }
 
 export function useTravelTimes(
@@ -30,7 +35,8 @@ export function useTravelTimes(
   useEffect(() => {
     if (courts.length === 0) return;
 
-    const key = cacheKey(origin);
+    const courtIdStr = courts.map((c) => c.id).join(",");
+    const key = cacheKey(origin, courtIdStr);
 
     // Check localStorage cache
     try {
