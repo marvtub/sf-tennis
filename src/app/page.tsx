@@ -22,10 +22,14 @@ import { AddHistoryDialog } from "@/components/AddHistoryDialog";
 import { HistoryPanel } from "@/components/HistoryPanel";
 import { applyFilter, getAvailableDates } from "@/lib/filter";
 import type { AvailabilityFilter } from "@/types";
+import type { Sport } from "@/lib/constants";
 
 export default function Home() {
+  // Sport toggle
+  const [sport, setSport] = useState<Sport>("tennis");
+
   // Data hooks
-  const { courts: rawCourts, fetchedAt, loading, error, refresh } = useCourts();
+  const { courts: rawCourts, fetchedAt, loading, error, refresh } = useCourts(sport);
   const userLocation = useUserLocation();
   const travelTimes = useTravelTimes(rawCourts, userLocation);
   const auth = useAuth();
@@ -103,6 +107,8 @@ export default function Home() {
         availableDates={availableDates}
         friends={friends}
         viewMode={viewMode}
+        sport={sport}
+        onSportChange={setSport}
         onRefresh={refresh}
         onToggleView={() => setViewMode((m) => (m === "map" ? "list" : "map"))}
         onShowSearch={() => setShowSearch(true)}

@@ -107,6 +107,7 @@ function transformLocation(
     return {
       id: c.id,
       courtNumber: c.courtNumber,
+      sportId: c.sports?.[0]?.sportId ?? "",
       priceCentsPerHour: c.config?.pricing?.default?.cents ?? 0,
       allowedDurations: c.allowedReservationDurations?.minutes ?? [90],
       reservationWindowDays: c.defaultReservationWindowDays,

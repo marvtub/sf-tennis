@@ -4,6 +4,7 @@ import { useState } from "react";
 import { FilterBar } from "./FilterBar";
 import { TimeSince } from "./TimeSince";
 import type { AvailabilityFilter, Friend } from "@/types";
+import type { Sport } from "@/lib/constants";
 
 interface TopBarProps {
   loading: boolean;
@@ -15,6 +16,8 @@ interface TopBarProps {
   availableDates: string[];
   friends: Friend[];
   viewMode: "map" | "list";
+  sport: Sport;
+  onSportChange: (sport: Sport) => void;
   onRefresh: () => void;
   onToggleView: () => void;
   onShowSearch: () => void;
@@ -36,6 +39,8 @@ export function TopBar({
   availableDates,
   friends,
   viewMode,
+  sport,
+  onSportChange,
   onRefresh,
   onToggleView,
   onShowSearch,
@@ -52,7 +57,33 @@ export function TopBar({
     <div className="absolute top-0 left-0 right-0 z-10 bg-white/90 backdrop-blur-sm border-b shadow-sm">
       <div className="flex items-center justify-between px-4 py-2">
         <div className="flex items-center gap-2">
-          <h1 className="text-lg font-bold">🎾 SF Tennis Courts</h1>
+          <h1 className="text-lg font-bold">
+            {sport === "tennis" ? "🎾" : "🏓"} SF {sport === "tennis" ? "Tennis" : "Pickleball"} Courts
+          </h1>
+
+          {/* Sport toggle */}
+          <div className="flex bg-gray-100 rounded-lg p-0.5">
+            <button
+              onClick={() => onSportChange("tennis")}
+              className={`px-2 py-1 text-xs rounded-md transition-colors ${
+                sport === "tennis"
+                  ? "bg-white shadow-sm font-medium text-gray-900"
+                  : "text-gray-500 hover:text-gray-700"
+              }`}
+            >
+              🎾 Tennis
+            </button>
+            <button
+              onClick={() => onSportChange("pickleball")}
+              className={`px-2 py-1 text-xs rounded-md transition-colors ${
+                sport === "pickleball"
+                  ? "bg-white shadow-sm font-medium text-gray-900"
+                  : "text-gray-500 hover:text-gray-700"
+              }`}
+            >
+              🏓 Pickleball
+            </button>
+          </div>
 
           {/* Search button */}
           <button

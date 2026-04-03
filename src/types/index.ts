@@ -47,6 +47,7 @@ export interface RecUsCourt {
   };
   allowedReservationDurations: { minutes: number[] };
   availableSlots: string[]; // "2026-03-30 07:30:00"
+  sports?: Array<{ id: string; sportId: string }>;
   isInstantBookable: boolean;
 }
 
@@ -72,6 +73,7 @@ export interface CourtLocation {
 export interface Court {
   id: string;
   courtNumber: string;
+  sportId: string; // rec.us sport UUID
   priceCentsPerHour: number;
   allowedDurations: number[]; // in minutes
   reservationWindowDays: number;
