@@ -45,14 +45,58 @@ export function CommandPalette({
   const [query, setQuery] = useState("");
   const [mobileTab, setMobileTab] = useState<MobileTab>("courts");
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const [isDesktop, setIsDesktop] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
+  const modalRef = useRef<HTMLDivElement>(null);
+
+  // Track viewport via matchMedia (stays in sync on resize/rotate)
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width: 640px)");
+    setIsDesktop(mq.matches);
+    const handler = (e: MediaQueryListEvent) => setIsDesktop(e.matches);
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
 
   // Focus input on mount (desktop only — mobile keyboard would push content)
   useEffect(() => {
-    if (window.innerWidth >= 640) {
+    if (isDesktop) {
       inputRef.current?.focus();
     }
+  }, [isDesktop]);
+
+  // Lock body scroll while open + restore focus on close
+  useEffect(() => {
+    const previouslyFocused = document.activeElement as HTMLElement | null;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      previouslyFocused?.focus?.();
+    };
+  }, []);
+
+  // Focus trap: keep Tab navigation inside the modal
+  useEffect(() => {
+    function handleTab(e: KeyboardEvent) {
+      if (e.key !== "Tab" || !modalRef.current) return;
+      const focusables = modalRef.current.querySelectorAll<HTMLElement>(
+        'button, [href], input, [tabindex]:not([tabindex="-1"])'
+      );
+      if (focusables.length === 0) return;
+      const first = focusables[0];
+      const last = focusables[focusables.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    }
+    window.addEventListener("keydown", handleTab);
+    return () => window.removeEventListener("keydown", handleTab);
   }, []);
 
   // Filtered + sorted courts (shared between mobile and desktop)
@@ -110,7 +154,7 @@ export function CommandPalette({
         active: !filter.date,
         filterValue: { ...filter, date: null },
       });
-      for (const d of availableDates.slice(0, 5)) {
+      for (const d of availableDates) {
         result.push({
           type: "filter",
           id: `filter-${d}`,
@@ -214,7 +258,12 @@ export function CommandPalette({
   }, [desktopItems, selectedIndex, onClose, handleSelect]);
 
   return (
-    <div className="fixed inset-0 z-[100] sm:flex sm:items-start sm:justify-center sm:pt-[12vh]">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label="Search and filter courts"
+      className="fixed inset-0 z-[100] sm:flex sm:items-start sm:justify-center sm:pt-[12vh]"
+    >
       {/* Backdrop (desktop only) */}
       <div
         className="hidden sm:block absolute inset-0 bg-black/40 backdrop-blur-sm"
@@ -223,7 +272,11 @@ export function CommandPalette({
 
       {/* Modal / Sheet */}
       <div
+        ref={modalRef}
         className="relative flex flex-col h-full sm:h-auto sm:max-h-[80vh] w-full sm:max-w-lg sm:mx-4 bg-white sm:rounded-xl sm:shadow-2xl sm:border overflow-hidden"
+        style={{
+          paddingTop: "env(safe-area-inset-top)",
+        }}
       >
         {/* Header */}
         <div className="flex items-center gap-2 px-4 py-3 border-b flex-shrink-0">
@@ -271,7 +324,7 @@ export function CommandPalette({
                 {labelForTime(filter.timeFrom, filter.timeTo)}
               </Pill>
             )}
-            <span className="text-xs text-gray-400 ml-auto">
+            <span className="text-xs text-gray-400 ml-auto whitespace-nowrap">
               {sortedCourts.length} court{sortedCourts.length !== 1 ? "s" : ""}
             </span>
           </div>
@@ -340,7 +393,7 @@ export function CommandPalette({
             active={mobileTab === "sport"}
             onClick={() => setMobileTab("sport")}
             icon={sport === "tennis" ? "🎾" : "🏓"}
-            label={sport === "tennis" ? "Tennis" : "Pickle"}
+            label={sport === "tennis" ? "Tennis" : "Pickleball"}
           />
           <MobileTabButton
             active={mobileTab === "day"}
