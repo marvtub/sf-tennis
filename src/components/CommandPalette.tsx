@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import type { CourtLocation, TravelTime, AvailabilityFilter } from "@/types";
 import type { Sport, CityId, CityConfig } from "@/lib/constants";
 import { CITIES } from "@/lib/constants";
@@ -20,6 +20,14 @@ interface CommandPaletteProps {
   onClose: () => void;
 }
 
+type MobileTab = "courts" | "city" | "sport" | "day" | "time";
+
+const TIME_PRESETS: { id: string; label: string; from: string; to: string }[] = [
+  { id: "morning", label: "🌅 Morning", from: "07:00", to: "12:00" },
+  { id: "afternoon", label: "☀️ Afternoon", from: "12:00", to: "17:00" },
+  { id: "evening", label: "🌆 Evening", from: "17:00", to: "21:00" },
+];
+
 export function CommandPalette({
   courts,
   travelTimes,
@@ -35,24 +43,42 @@ export function CommandPalette({
   onClose,
 }: CommandPaletteProps) {
   const [query, setQuery] = useState("");
-  const inputRef = useRef<HTMLInputElement>(null);
+  const [mobileTab, setMobileTab] = useState<MobileTab>("courts");
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
 
-  // Focus input on mount
+  // Focus input on mount (desktop only — mobile keyboard would push content)
   useEffect(() => {
-    inputRef.current?.focus();
+    if (window.innerWidth >= 640) {
+      inputRef.current?.focus();
+    }
   }, []);
 
-  // Build flat item list: settings sections + court results
-  const items = useMemo(() => {
+  // Filtered + sorted courts (shared between mobile and desktop)
+  const sortedCourts = useMemo(() => {
+    const q = query.toLowerCase().trim();
+    const filtered = q
+      ? courts.filter(
+          (c) =>
+            (c.name ?? "").toLowerCase().includes(q) ||
+            (c.address ?? "").toLowerCase().includes(q)
+        )
+      : courts;
+
+    return [...filtered].sort((a, b) => {
+      const aDist = travelTimes.get(a.id)?.walking?.durationMinutes ?? 999;
+      const bDist = travelTimes.get(b.id)?.walking?.durationMinutes ?? 999;
+      return aDist - bDist;
+    });
+  }, [courts, query, travelTimes]);
+
+  // Desktop items (all sections inline)
+  const desktopItems = useMemo(() => {
     const q = query.toLowerCase().trim();
     const result: PaletteItem[] = [];
 
-    // When no query, show settings + courts
-    // When query, only show matching courts
     if (!q) {
-      // City section
       const cityEntries = Object.entries(CITIES) as [CityId, CityConfig][];
       for (const [id, c] of cityEntries) {
         result.push({
@@ -63,8 +89,6 @@ export function CommandPalette({
           active: id === city,
         });
       }
-
-      // Sport section
       result.push({
         type: "sport",
         id: "sport-tennis",
@@ -79,14 +103,12 @@ export function CommandPalette({
         label: "🏓 Pickleball",
         active: sport === "pickleball",
       });
-
-      // Date filter shortcuts
       result.push({
         type: "filter",
         id: "filter-any",
         label: "Any day",
         active: !filter.date,
-        filterValue: { date: null, timeFrom: null, timeTo: null },
+        filterValue: { ...filter, date: null },
       });
       for (const d of availableDates.slice(0, 5)) {
         result.push({
@@ -97,13 +119,6 @@ export function CommandPalette({
           filterValue: { ...filter, date: d },
         });
       }
-
-      // Time-of-day shortcuts
-      const timePresets: { id: string; label: string; from: string; to: string }[] = [
-        { id: "morning", label: "🌅 Morning (7–12)", from: "07:00", to: "12:00" },
-        { id: "afternoon", label: "☀️ Afternoon (12–17)", from: "12:00", to: "17:00" },
-        { id: "evening", label: "🌆 Evening (17–21)", from: "17:00", to: "21:00" },
-      ];
       result.push({
         type: "filter",
         id: "time-any",
@@ -111,7 +126,7 @@ export function CommandPalette({
         active: !filter.timeFrom && !filter.timeTo,
         filterValue: { ...filter, timeFrom: null, timeTo: null },
       });
-      for (const tp of timePresets) {
+      for (const tp of TIME_PRESETS) {
         result.push({
           type: "filter",
           id: `time-${tp.id}`,
@@ -122,22 +137,7 @@ export function CommandPalette({
       }
     }
 
-    // Courts — always shown, filtered by query
-    const filtered = q
-      ? courts.filter(
-          (c) =>
-            (c.name ?? "").toLowerCase().includes(q) ||
-            (c.address ?? "").toLowerCase().includes(q)
-        )
-      : courts;
-
-    const sorted = [...filtered].sort((a, b) => {
-      const aDist = travelTimes.get(a.id)?.walking?.durationMinutes ?? 999;
-      const bDist = travelTimes.get(b.id)?.walking?.durationMinutes ?? 999;
-      return aDist - bDist;
-    });
-
-    for (const court of sorted) {
+    for (const court of sortedCourts) {
       result.push({
         type: "court",
         id: court.id,
@@ -148,40 +148,50 @@ export function CommandPalette({
     }
 
     return result;
-  }, [courts, query, travelTimes, favourites, sport, city, filter, availableDates]);
+  }, [
+    sortedCourts,
+    travelTimes,
+    favourites,
+    sport,
+    city,
+    filter,
+    availableDates,
+    query,
+  ]);
 
-  // Reset selection when items change
+  // Reset desktop keyboard selection when items change
   useEffect(() => {
-    // Jump to first court when there's a query
     if (query) {
       setSelectedIndex(0);
     } else {
-      // Jump past settings to first court
-      const firstCourt = items.findIndex((i) => i.type === "court");
+      const firstCourt = desktopItems.findIndex((i) => i.type === "court");
       setSelectedIndex(firstCourt >= 0 ? firstCourt : 0);
     }
-  }, [items, query]);
+  }, [desktopItems, query]);
 
-  // Scroll selected into view
+  // Scroll selected into view (desktop)
   useEffect(() => {
     const el = listRef.current?.querySelector(`[data-idx="${selectedIndex}"]`);
     el?.scrollIntoView({ block: "nearest" });
   }, [selectedIndex]);
 
-  function handleSelect(item: PaletteItem) {
-    if (item.type === "court") {
-      onSelectCourt(item.court.id);
-      onClose();
-    } else if (item.type === "sport") {
-      onSportChange(item.sport);
-    } else if (item.type === "city") {
-      onCityChange(item.cityId);
-    } else if (item.type === "filter") {
-      onFilterChange(item.filterValue);
-    }
-  }
+  const handleSelect = useCallback(
+    (item: PaletteItem) => {
+      if (item.type === "court") {
+        onSelectCourt(item.court.id);
+        onClose();
+      } else if (item.type === "sport") {
+        onSportChange(item.sport);
+      } else if (item.type === "city") {
+        onCityChange(item.cityId);
+      } else if (item.type === "filter") {
+        onFilterChange(item.filterValue);
+      }
+    },
+    [onSelectCourt, onClose, onSportChange, onCityChange, onFilterChange]
+  );
 
-  // Keyboard navigation
+  // Keyboard navigation (desktop)
   useEffect(() => {
     function handleKey(e: KeyboardEvent) {
       if (e.key === "Escape") {
@@ -189,43 +199,53 @@ export function CommandPalette({
         onClose();
       } else if (e.key === "ArrowDown") {
         e.preventDefault();
-        setSelectedIndex((i) => Math.min(i + 1, items.length - 1));
+        setSelectedIndex((i) => Math.min(i + 1, desktopItems.length - 1));
       } else if (e.key === "ArrowUp") {
         e.preventDefault();
         setSelectedIndex((i) => Math.max(i - 1, 0));
-      } else if (e.key === "Enter" && items.length > 0) {
+      } else if (e.key === "Enter" && desktopItems.length > 0) {
         e.preventDefault();
-        handleSelect(items[selectedIndex]);
+        handleSelect(desktopItems[selectedIndex]);
       }
     }
 
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
-  }, [items, selectedIndex, onClose]);
-
-  // Section headers
-  let lastType = "";
+  }, [desktopItems, selectedIndex, onClose, handleSelect]);
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-start justify-center pt-[12vh]">
-      {/* Backdrop */}
+    <div className="fixed inset-0 z-[100] sm:flex sm:items-start sm:justify-center sm:pt-[12vh]">
+      {/* Backdrop (desktop only) */}
       <div
-        className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+        className="hidden sm:block absolute inset-0 bg-black/40 backdrop-blur-sm"
         onClick={onClose}
       />
 
-      {/* Modal */}
-      <div className="relative w-full max-w-lg mx-4 bg-white rounded-xl shadow-2xl border overflow-hidden">
-        {/* Search input */}
-        <div className="flex items-center gap-3 px-4 py-3 border-b">
-          <span className="text-gray-400 text-lg">🔍</span>
+      {/* Modal / Sheet */}
+      <div
+        className="relative flex flex-col h-full sm:h-auto sm:max-h-[80vh] w-full sm:max-w-lg sm:mx-4 bg-white sm:rounded-xl sm:shadow-2xl sm:border overflow-hidden"
+      >
+        {/* Header */}
+        <div className="flex items-center gap-2 px-4 py-3 border-b flex-shrink-0">
+          {/* Mobile: close button */}
+          <button
+            onClick={onClose}
+            aria-label="Close"
+            className="sm:hidden -ml-1 w-10 h-10 flex items-center justify-center text-gray-500 text-xl"
+          >
+            ✕
+          </button>
+          <span className="hidden sm:inline text-gray-400 text-lg">🔍</span>
           <input
             ref={inputRef}
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search courts, change city or sport..."
-            className="flex-1 text-sm outline-none placeholder:text-gray-400"
+            placeholder="Search courts"
+            autoComplete="off"
+            autoCorrect="off"
+            spellCheck={false}
+            className="flex-1 text-base sm:text-sm outline-none placeholder:text-gray-400 bg-transparent"
           />
           <kbd className="hidden sm:inline-block px-1.5 py-0.5 text-[10px] font-medium text-gray-400 bg-gray-100 border rounded">
             ESC
@@ -234,114 +254,409 @@ export function CommandPalette({
 
         {/* Active settings pills */}
         {!query && (
-          <div className="flex items-center gap-1.5 px-4 py-2 border-b bg-gray-50/50 flex-wrap">
-            <Pill active>{CITIES[city]?.shortLabel ?? city}</Pill>
-            <Pill active>{sport === "tennis" ? "🎾 Tennis" : "🏓 Pickleball"}</Pill>
+          <div className="flex items-center gap-1.5 px-4 py-2 border-b bg-gray-50/50 flex-wrap flex-shrink-0">
+            <Pill>{CITIES[city]?.shortLabel ?? city}</Pill>
+            <Pill>{sport === "tennis" ? "🎾 Tennis" : "🏓 Pickleball"}</Pill>
             {filter.date && (
-              <Pill
-                active
-                onRemove={() =>
-                  onFilterChange({ ...filter, date: null })
-                }
-              >
+              <Pill onRemove={() => onFilterChange({ ...filter, date: null })}>
                 {formatDateLabel(filter.date)}
               </Pill>
             )}
             {filter.timeFrom && (
               <Pill
-                active
                 onRemove={() =>
                   onFilterChange({ ...filter, timeFrom: null, timeTo: null })
                 }
               >
-                {filter.timeFrom}–{filter.timeTo ?? ""}
+                {labelForTime(filter.timeFrom, filter.timeTo)}
               </Pill>
             )}
-            <span className="text-xs text-gray-400 ml-1">
-              {courts.length} court{courts.length !== 1 ? "s" : ""}
+            <span className="text-xs text-gray-400 ml-auto">
+              {sortedCourts.length} court{sortedCourts.length !== 1 ? "s" : ""}
             </span>
           </div>
         )}
 
-        {/* Results */}
-        <div ref={listRef} className="max-h-[50vh] overflow-y-auto">
-          {items.length === 0 ? (
-            <div className="px-4 py-8 text-center text-sm text-gray-400">
-              No results found
-            </div>
-          ) : (
-            items.map((item, i) => {
-              // Section headers
-              let header: string | null = null;
-              const itemKey = item.type === "filter" && item.id.startsWith("time-")
-                ? "time" : item.type;
-              if (itemKey !== lastType) {
-                lastType = itemKey;
-                if (itemKey === "city") header = "📍 City";
-                else if (itemKey === "sport") header = "🏅 Sport";
-                else if (itemKey === "filter") header = "📅 Day";
-                else if (itemKey === "time") header = "⏰ Time";
-                else if (itemKey === "court")
-                  header = query ? "Courts" : "🏟️ Courts";
-              }
+        {/* ── DESKTOP: flat item list with all sections ── */}
+        <div
+          ref={listRef}
+          className="hidden sm:block overflow-y-auto"
+          style={{ maxHeight: "calc(80vh - 120px)" }}
+        >
+          <DesktopItems
+            items={desktopItems}
+            selectedIndex={selectedIndex}
+            query={query}
+            onSelect={handleSelect}
+            onHover={setSelectedIndex}
+          />
+        </div>
 
-              return (
-                <div key={item.id}>
-                  {header && (
-                    <div className="px-4 pt-3 pb-1 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">
-                      {header}
-                    </div>
-                  )}
-                  {item.type === "court" ? (
-                    <CourtRow
-                      item={item}
-                      isSelected={i === selectedIndex}
-                      idx={i}
-                      onSelect={() => handleSelect(item)}
-                      onHover={() => setSelectedIndex(i)}
-                    />
-                  ) : (
-                    <SettingRow
-                      item={item}
-                      isSelected={i === selectedIndex}
-                      idx={i}
-                      onSelect={() => handleSelect(item)}
-                      onHover={() => setSelectedIndex(i)}
-                    />
-                  )}
-                </div>
-              );
-            })
-          )}
+        {/* ── MOBILE: tab content ── */}
+        <div className="sm:hidden flex-1 overflow-y-auto">
+          <MobileContent
+            tab={mobileTab}
+            sortedCourts={sortedCourts}
+            travelTimes={travelTimes}
+            favourites={favourites}
+            sport={sport}
+            city={city}
+            filter={filter}
+            availableDates={availableDates}
+            onSelectCourt={(id) => {
+              onSelectCourt(id);
+              onClose();
+            }}
+            onSportChange={(s) => {
+              onSportChange(s);
+              setMobileTab("courts");
+            }}
+            onCityChange={(c) => {
+              onCityChange(c);
+              setMobileTab("courts");
+            }}
+            onFilterChange={(f) => {
+              onFilterChange(f);
+              setMobileTab("courts");
+            }}
+          />
+        </div>
+
+        {/* ── MOBILE: bottom tab bar ── */}
+        <div className="sm:hidden flex border-t bg-white flex-shrink-0 pb-[env(safe-area-inset-bottom)]">
+          <MobileTabButton
+            active={mobileTab === "courts"}
+            onClick={() => setMobileTab("courts")}
+            icon="🏟️"
+            label="Courts"
+          />
+          <MobileTabButton
+            active={mobileTab === "city"}
+            onClick={() => setMobileTab("city")}
+            icon="📍"
+            label={CITIES[city]?.shortLabel ?? "City"}
+          />
+          <MobileTabButton
+            active={mobileTab === "sport"}
+            onClick={() => setMobileTab("sport")}
+            icon={sport === "tennis" ? "🎾" : "🏓"}
+            label={sport === "tennis" ? "Tennis" : "Pickle"}
+          />
+          <MobileTabButton
+            active={mobileTab === "day"}
+            onClick={() => setMobileTab("day")}
+            icon="📅"
+            label={filter.date ? formatDateLabel(filter.date).split(",")[0] : "Day"}
+          />
+          <MobileTabButton
+            active={mobileTab === "time"}
+            onClick={() => setMobileTab("time")}
+            icon="⏰"
+            label={filter.timeFrom ? filter.timeFrom : "Time"}
+          />
         </div>
       </div>
     </div>
   );
 }
 
-// ── Item types ──
+// ── Mobile tab content ──
 
-type PaletteItem =
-  | { type: "city"; id: string; cityId: CityId; label: string; active: boolean }
-  | { type: "sport"; id: string; sport: Sport; label: string; active: boolean }
-  | {
-      type: "filter";
-      id: string;
-      label: string;
-      active: boolean;
-      filterValue: AvailabilityFilter;
+function MobileContent({
+  tab,
+  sortedCourts,
+  travelTimes,
+  favourites,
+  sport,
+  city,
+  filter,
+  availableDates,
+  onSelectCourt,
+  onSportChange,
+  onCityChange,
+  onFilterChange,
+}: {
+  tab: MobileTab;
+  sortedCourts: CourtLocation[];
+  travelTimes: Map<string, TravelTime>;
+  favourites: Set<string>;
+  sport: Sport;
+  city: CityId;
+  filter: AvailabilityFilter;
+  availableDates: string[];
+  onSelectCourt: (id: string) => void;
+  onSportChange: (sport: Sport) => void;
+  onCityChange: (city: CityId) => void;
+  onFilterChange: (filter: AvailabilityFilter) => void;
+}) {
+  if (tab === "courts") {
+    if (sortedCourts.length === 0) {
+      return (
+        <div className="px-4 py-12 text-center text-sm text-gray-400">
+          No courts found
+        </div>
+      );
     }
-  | {
-      type: "court";
-      id: string;
-      court: CourtLocation;
-      walkMin: number | null;
-      isFav: boolean;
-    };
+    return (
+      <div className="divide-y">
+        {sortedCourts.map((court) => (
+          <MobileCourtRow
+            key={court.id}
+            court={court}
+            walkMin={travelTimes.get(court.id)?.walking?.durationMinutes ?? null}
+            isFav={favourites.has(court.id)}
+            onSelect={() => onSelectCourt(court.id)}
+          />
+        ))}
+      </div>
+    );
+  }
+
+  if (tab === "city") {
+    const cityEntries = Object.entries(CITIES) as [CityId, CityConfig][];
+    return (
+      <div className="divide-y">
+        {cityEntries.map(([id, c]) => (
+          <MobileOptionRow
+            key={id}
+            label={c.label}
+            active={id === city}
+            onSelect={() => onCityChange(id)}
+          />
+        ))}
+      </div>
+    );
+  }
+
+  if (tab === "sport") {
+    return (
+      <div className="divide-y">
+        <MobileOptionRow
+          label="🎾 Tennis"
+          active={sport === "tennis"}
+          onSelect={() => onSportChange("tennis")}
+        />
+        <MobileOptionRow
+          label="🏓 Pickleball"
+          active={sport === "pickleball"}
+          onSelect={() => onSportChange("pickleball")}
+        />
+      </div>
+    );
+  }
+
+  if (tab === "day") {
+    return (
+      <div className="divide-y">
+        <MobileOptionRow
+          label="Any day"
+          active={!filter.date}
+          onSelect={() => onFilterChange({ ...filter, date: null })}
+        />
+        {availableDates.map((d) => (
+          <MobileOptionRow
+            key={d}
+            label={formatDateLabel(d)}
+            active={filter.date === d}
+            onSelect={() => onFilterChange({ ...filter, date: d })}
+          />
+        ))}
+      </div>
+    );
+  }
+
+  if (tab === "time") {
+    return (
+      <div className="divide-y">
+        <MobileOptionRow
+          label="Any time"
+          active={!filter.timeFrom && !filter.timeTo}
+          onSelect={() =>
+            onFilterChange({ ...filter, timeFrom: null, timeTo: null })
+          }
+        />
+        {TIME_PRESETS.map((tp) => (
+          <MobileOptionRow
+            key={tp.id}
+            label={`${tp.label} (${tp.from}–${tp.to})`}
+            active={filter.timeFrom === tp.from && filter.timeTo === tp.to}
+            onSelect={() =>
+              onFilterChange({ ...filter, timeFrom: tp.from, timeTo: tp.to })
+            }
+          />
+        ))}
+      </div>
+    );
+  }
+
+  return null;
+}
+
+// ── Desktop flat list ──
+
+function DesktopItems({
+  items,
+  selectedIndex,
+  query,
+  onSelect,
+  onHover,
+}: {
+  items: PaletteItem[];
+  selectedIndex: number;
+  query: string;
+  onSelect: (item: PaletteItem) => void;
+  onHover: (idx: number) => void;
+}) {
+  if (items.length === 0) {
+    return (
+      <div className="px-4 py-8 text-center text-sm text-gray-400">
+        No results found
+      </div>
+    );
+  }
+
+  let lastHeader = "";
+  return (
+    <>
+      {items.map((item, i) => {
+        const headerKey =
+          item.type === "filter" && item.id.startsWith("time-")
+            ? "time"
+            : item.type;
+        let header: string | null = null;
+        if (headerKey !== lastHeader) {
+          lastHeader = headerKey;
+          if (headerKey === "city") header = "📍 City";
+          else if (headerKey === "sport") header = "🏅 Sport";
+          else if (headerKey === "filter") header = "📅 Day";
+          else if (headerKey === "time") header = "⏰ Time";
+          else if (headerKey === "court") header = query ? "Courts" : "🏟️ Courts";
+        }
+
+        return (
+          <div key={item.id}>
+            {header && (
+              <div className="px-4 pt-3 pb-1 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">
+                {header}
+              </div>
+            )}
+            {item.type === "court" ? (
+              <DesktopCourtRow
+                item={item}
+                isSelected={i === selectedIndex}
+                idx={i}
+                onSelect={() => onSelect(item)}
+                onHover={() => onHover(i)}
+              />
+            ) : (
+              <DesktopSettingRow
+                item={item}
+                isSelected={i === selectedIndex}
+                idx={i}
+                onSelect={() => onSelect(item)}
+                onHover={() => onHover(i)}
+              />
+            )}
+          </div>
+        );
+      })}
+    </>
+  );
+}
 
 // ── Row components ──
 
-function SettingRow({
+function MobileCourtRow({
+  court,
+  walkMin,
+  isFav,
+  onSelect,
+}: {
+  court: CourtLocation;
+  walkMin: number | null;
+  isFav: boolean;
+  onSelect: () => void;
+}) {
+  return (
+    <button
+      onClick={onSelect}
+      className="w-full text-left px-4 py-3.5 flex items-center gap-3 active:bg-gray-100 min-h-[60px]"
+    >
+      <span
+        className={`w-3 h-3 rounded-full flex-shrink-0 ${
+          court.availabilityStatus === "available"
+            ? "bg-green-500"
+            : court.availabilityStatus === "later"
+            ? "bg-yellow-500"
+            : "bg-red-500"
+        }`}
+      />
+      <div className="flex-1 min-w-0">
+        <div className="text-base font-medium truncate">
+          {isFav && "⭐ "}
+          {court.name}
+        </div>
+        <div className="text-xs text-gray-500 truncate">{court.address}</div>
+      </div>
+      <div className="flex flex-col items-end gap-0.5 flex-shrink-0 text-xs text-gray-500">
+        {walkMin != null && <span>🚶 {walkMin}m</span>}
+        <span className="text-gray-400">
+          {court.totalSlotsToday > 0
+            ? `${court.totalSlotsToday} today`
+            : `${court.totalSlotsWeek} wk`}
+        </span>
+      </div>
+    </button>
+  );
+}
+
+function MobileOptionRow({
+  label,
+  active,
+  onSelect,
+}: {
+  label: string;
+  active: boolean;
+  onSelect: () => void;
+}) {
+  return (
+    <button
+      onClick={onSelect}
+      className="w-full text-left px-4 py-4 flex items-center justify-between active:bg-gray-100 min-h-[56px]"
+    >
+      <span className={`text-base ${active ? "font-semibold text-blue-600" : "text-gray-800"}`}>
+        {label}
+      </span>
+      {active && <span className="text-blue-600 text-lg">✓</span>}
+    </button>
+  );
+}
+
+function MobileTabButton({
+  active,
+  onClick,
+  icon,
+  label,
+}: {
+  active: boolean;
+  onClick: () => void;
+  icon: string;
+  label: string;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={`flex-1 flex flex-col items-center justify-center py-2 min-h-[56px] text-[10px] gap-0.5 transition-colors ${
+        active ? "text-blue-600" : "text-gray-500 active:bg-gray-50"
+      }`}
+    >
+      <span className="text-lg">{icon}</span>
+      <span className="font-medium truncate max-w-full px-1">{label}</span>
+    </button>
+  );
+}
+
+function DesktopSettingRow({
   item,
   isSelected,
   idx,
@@ -364,7 +679,9 @@ function SettingRow({
         isSelected ? "bg-blue-50" : "hover:bg-gray-50"
       }`}
     >
-      <span className={item.active ? "font-medium text-gray-900" : "text-gray-600"}>
+      <span
+        className={item.active ? "font-medium text-gray-900" : "text-gray-600"}
+      >
         {item.label}
       </span>
       {item.active && (
@@ -374,7 +691,7 @@ function SettingRow({
   );
 }
 
-function CourtRow({
+function DesktopCourtRow({
   item,
   isSelected,
   idx,
@@ -425,25 +742,37 @@ function CourtRow({
   );
 }
 
+// ── Item types ──
+
+type PaletteItem =
+  | { type: "city"; id: string; cityId: CityId; label: string; active: boolean }
+  | { type: "sport"; id: string; sport: Sport; label: string; active: boolean }
+  | {
+      type: "filter";
+      id: string;
+      label: string;
+      active: boolean;
+      filterValue: AvailabilityFilter;
+    }
+  | {
+      type: "court";
+      id: string;
+      court: CourtLocation;
+      walkMin: number | null;
+      isFav: boolean;
+    };
+
 // ── Helpers ──
 
 function Pill({
   children,
-  active,
   onRemove,
 }: {
   children: React.ReactNode;
-  active?: boolean;
   onRemove?: () => void;
 }) {
   return (
-    <span
-      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs ${
-        active
-          ? "bg-blue-100 text-blue-700 font-medium"
-          : "bg-gray-100 text-gray-600"
-      }`}
-    >
+    <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-700 font-medium">
       {children}
       {onRemove && (
         <button
@@ -451,7 +780,8 @@ function Pill({
             e.stopPropagation();
             onRemove();
           }}
-          className="hover:text-blue-900 ml-0.5"
+          className="hover:text-blue-900 ml-0.5 w-4 h-4 flex items-center justify-center"
+          aria-label="Remove filter"
         >
           ✕
         </button>
@@ -478,4 +808,11 @@ function formatDateLabel(dateStr: string): string {
     day: "numeric",
     timeZone: "America/Los_Angeles",
   });
+}
+
+function labelForTime(from: string, to: string | null): string {
+  for (const tp of TIME_PRESETS) {
+    if (tp.from === from && tp.to === to) return tp.label;
+  }
+  return `${from}${to ? `–${to}` : ""}`;
 }
