@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect, useCallback } from "react";
+import dynamic from "next/dynamic";
 import { useCourts } from "@/hooks/useCourts";
 import { useTravelTimes } from "@/hooks/useTravelTimes";
 import { useUserLocation } from "@/hooks/useUserLocation";
@@ -16,11 +17,25 @@ import { CourtPanel } from "@/components/CourtPanel";
 import { CommandPalette } from "@/components/CommandPalette";
 import { LoadingSkeleton } from "@/components/LoadingSkeleton";
 import { ErrorBanner } from "@/components/ErrorBanner";
-import { LoginDialog } from "@/components/LoginDialog";
-import { AddFriendDialog } from "@/components/AddFriendDialog";
-import { AddHistoryDialog } from "@/components/AddHistoryDialog";
-import { HistoryPanel } from "@/components/HistoryPanel";
 import { applyFilter, getAvailableDates } from "@/lib/filter";
+
+// Lazy-load dialogs — only fetched when user opens them
+const LoginDialog = dynamic(
+  () => import("@/components/LoginDialog").then((m) => m.LoginDialog),
+  { ssr: false }
+);
+const AddFriendDialog = dynamic(
+  () => import("@/components/AddFriendDialog").then((m) => m.AddFriendDialog),
+  { ssr: false }
+);
+const AddHistoryDialog = dynamic(
+  () => import("@/components/AddHistoryDialog").then((m) => m.AddHistoryDialog),
+  { ssr: false }
+);
+const HistoryPanel = dynamic(
+  () => import("@/components/HistoryPanel").then((m) => m.HistoryPanel),
+  { ssr: false }
+);
 import type { AvailabilityFilter } from "@/types";
 import type { Sport, CityId } from "@/lib/constants";
 

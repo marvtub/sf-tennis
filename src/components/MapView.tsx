@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, memo } from "react";
 import Map, { Marker, NavigationControl } from "react-map-gl/mapbox";
 import "mapbox-gl/dist/mapbox-gl.css";
 import type { CourtLocation, TravelTime, Friend } from "@/types";
@@ -68,6 +68,14 @@ export function MapView({
     onSelectCourt(null);
   }, [onSelectCourt]);
 
+  // Single stable selection handler — memoized by id
+  const handleCourtSelect = useCallback(
+    (id: string) => {
+      onSelectCourt(id);
+    },
+    [onSelectCourt]
+  );
+
   return (
     <Map
       {...viewState}
@@ -102,29 +110,80 @@ export function MapView({
         </Marker>
       ))}
 
-      {/* Court markers */}
+      {/* Court markers — each memoized, only re-render on its own prop changes */}
       {courts.map((loc) => (
-        <Marker
+        <CourtMarker
           key={loc.id}
-          latitude={loc.lat}
-          longitude={loc.lng}
-          anchor="center"
-          onClick={(e) => {
-            e.originalEvent.stopPropagation();
-            onSelectCourt(loc.id);
-          }}
-        >
-          <div className="relative">
-            <CourtPin
-              location={loc}
-              isSelected={selectedId === loc.id}
-              isFavourite={favourites.has(loc.id)}
-              onClick={() => onSelectCourt(loc.id)}
-            />
-            <TravelBadgeMini travelTime={travelTimes.get(loc.id)} />
-          </div>
-        </Marker>
+          location={loc}
+          isSelected={selectedId === loc.id}
+          isFavourite={favourites.has(loc.id)}
+          travelTime={travelTimes.get(loc.id)}
+          onSelect={handleCourtSelect}
+        />
       ))}
     </Map>
   );
 }
+
+// Memoized court marker — stable props mean React skips re-render work
+interface CourtMarkerProps {
+  location: CourtLocation;
+  isSelected: boolean;
+  isFavourite: boolean;
+  travelTime: TravelTime | undefined;
+  onSelect: (id: string) => void;
+}
+
+const CourtMarker = memo(
+  function CourtMarker({
+    location,
+    isSelected,
+    isFavourite,
+    travelTime,
+    onSelect,
+  }: CourtMarkerProps) {
+    const handleClick = useCallback(() => {
+      onSelect(location.id);
+    }, [onSelect, location.id]);
+
+    const handleMarkerClick = useCallback(
+      (e: { originalEvent: MouseEvent }) => {
+        e.originalEvent.stopPropagation();
+        onSelect(location.id);
+      },
+      [onSelect, location.id]
+    );
+
+    return (
+      <Marker
+        latitude={location.lat}
+        longitude={location.lng}
+        anchor="center"
+        onClick={handleMarkerClick}
+      >
+        <div className="relative">
+          <CourtPin
+            location={location}
+            isSelected={isSelected}
+            isFavourite={isFavourite}
+            onClick={handleClick}
+          />
+          <TravelBadgeMini travelTime={travelTime} />
+        </div>
+      </Marker>
+    );
+  },
+  (prev, next) => {
+    return (
+      prev.location.id === next.location.id &&
+      prev.location.availabilityStatus === next.location.availabilityStatus &&
+      prev.location.lat === next.location.lat &&
+      prev.location.lng === next.location.lng &&
+      prev.isSelected === next.isSelected &&
+      prev.isFavourite === next.isFavourite &&
+      prev.travelTime?.walking?.durationMinutes ===
+        next.travelTime?.walking?.durationMinutes &&
+      prev.onSelect === next.onSelect
+    );
+  }
+);

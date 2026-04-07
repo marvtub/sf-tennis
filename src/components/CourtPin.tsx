@@ -1,5 +1,6 @@
 "use client";
 
+import { memo } from "react";
 import type { CourtLocation } from "@/types";
 
 interface CourtPinProps {
@@ -30,7 +31,7 @@ const STATUS_STYLES = {
   },
 } as const;
 
-export function CourtPin({
+function CourtPinInner({
   location,
   isSelected,
   isFavourite,
@@ -57,6 +58,17 @@ export function CourtPin({
     </button>
   );
 }
+
+// Memoized so unchanged markers don't re-render when parent state changes
+export const CourtPin = memo(CourtPinInner, (prev, next) => {
+  return (
+    prev.location.id === next.location.id &&
+    prev.location.availabilityStatus === next.location.availabilityStatus &&
+    prev.isSelected === next.isSelected &&
+    prev.isFavourite === next.isFavourite &&
+    prev.onClick === next.onClick
+  );
+});
 
 export function HomePin() {
   return (

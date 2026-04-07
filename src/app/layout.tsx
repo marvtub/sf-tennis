@@ -13,6 +13,12 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
+      <head>
+        {/* Preconnect to hot APIs to save ~100ms on TLS handshake */}
+        <link rel="preconnect" href="https://api.mapbox.com" crossOrigin="" />
+        <link rel="preconnect" href="https://api.rec.us" crossOrigin="" />
+        <link rel="dns-prefetch" href="https://www.google.com" />
+      </head>
       <body className="antialiased">{children}</body>
     </html>
   );

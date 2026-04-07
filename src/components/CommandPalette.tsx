@@ -43,7 +43,14 @@ export function CommandPalette({
   onClose,
 }: CommandPaletteProps) {
   const [query, setQuery] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
   const [mobileTab, setMobileTab] = useState<MobileTab>("courts");
+
+  // Debounce query (150ms) so filtering doesn't run on every keystroke
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedQuery(query), 150);
+    return () => clearTimeout(t);
+  }, [query]);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [isDesktop, setIsDesktop] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -101,7 +108,7 @@ export function CommandPalette({
 
   // Filtered + sorted courts (shared between mobile and desktop)
   const sortedCourts = useMemo(() => {
-    const q = query.toLowerCase().trim();
+    const q = debouncedQuery.toLowerCase().trim();
     const filtered = q
       ? courts.filter(
           (c) =>
@@ -115,11 +122,11 @@ export function CommandPalette({
       const bDist = travelTimes.get(b.id)?.walking?.durationMinutes ?? 999;
       return aDist - bDist;
     });
-  }, [courts, query, travelTimes]);
+  }, [courts, debouncedQuery, travelTimes]);
 
   // Desktop items (all sections inline)
   const desktopItems = useMemo(() => {
-    const q = query.toLowerCase().trim();
+    const q = debouncedQuery.toLowerCase().trim();
     const result: PaletteItem[] = [];
 
     if (!q) {
@@ -200,18 +207,18 @@ export function CommandPalette({
     city,
     filter,
     availableDates,
-    query,
+    debouncedQuery,
   ]);
 
   // Reset desktop keyboard selection when items change
   useEffect(() => {
-    if (query) {
+    if (debouncedQuery) {
       setSelectedIndex(0);
     } else {
       const firstCourt = desktopItems.findIndex((i) => i.type === "court");
       setSelectedIndex(firstCourt >= 0 ? firstCourt : 0);
     }
-  }, [desktopItems, query]);
+  }, [desktopItems, debouncedQuery]);
 
   // Scroll selected into view (desktop)
   useEffect(() => {

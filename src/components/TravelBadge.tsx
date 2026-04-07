@@ -1,5 +1,6 @@
 "use client";
 
+import { memo } from "react";
 import type { TravelTime } from "@/types";
 
 interface TravelBadgeProps {
@@ -56,7 +57,7 @@ export function TravelBadge({ travelTime, destLat, destLng, originLat, originLng
 }
 
 /** Compact badge for map pins */
-export function TravelBadgeMini({
+function TravelBadgeMiniInner({
   travelTime,
 }: {
   travelTime: TravelTime | undefined;
@@ -68,3 +69,10 @@ export function TravelBadgeMini({
     </div>
   );
 }
+
+export const TravelBadgeMini = memo(TravelBadgeMiniInner, (prev, next) => {
+  return (
+    prev.travelTime?.walking?.durationMinutes ===
+    next.travelTime?.walking?.durationMinutes
+  );
+});
