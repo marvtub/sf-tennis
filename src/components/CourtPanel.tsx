@@ -171,12 +171,12 @@ export function CourtPanel({
       {/* Booking link */}
       <div className="px-4 py-3">
         <a
-          href={`https://www.rec.us/locations/${location.id}`}
+          href={`https://www.rec.us/locations/${location.id}?tab=calendar`}
           target="_blank"
           rel="noopener noreferrer"
           className="block w-full text-center py-2.5 px-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm transition-colors"
         >
-          Book on rec.us →
+          Open calendar on rec.us →
         </a>
       </div>
     </div>

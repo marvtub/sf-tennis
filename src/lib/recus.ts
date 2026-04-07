@@ -114,7 +114,7 @@ function transformLocation(
       reservationWindowDays: c.defaultReservationWindowDays,
       releaseTime: c.reservationReleaseTimeLocal,
       availableSlots: slots,
-      bookingUrl: `https://www.rec.us/locations/${loc.id}?courtId=${c.id}`,
+      bookingUrl: `https://www.rec.us/locations/${loc.id}?courtId=${c.id}&tab=calendar`,
     };
   });
 
