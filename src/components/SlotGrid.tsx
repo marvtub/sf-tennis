@@ -95,7 +95,7 @@ export function SlotGrid({ courts }: SlotGridProps) {
                     target="_blank"
                     rel="noopener noreferrer"
                     className="px-2 py-1 text-xs bg-green-50 text-green-700 rounded border border-green-200 hover:bg-green-100 transition-colors min-w-[72px]"
-                    title={slot.weather ? `${slot.weather.label}${slot.weather.temperatureC !== null ? `, ${slot.weather.temperatureC}°C` : ""}${slot.weather.precipitationProbability !== null ? `, ${slot.weather.precipitationProbability}% rain` : ""}` : undefined}
+                    title={slot.weather ? formatWeatherTooltip(slot.weather) : undefined}
                   >
                     <div className="font-medium">{slot.time}</div>
                     {slot.weather && (
@@ -105,7 +105,10 @@ export function SlotGrid({ courts }: SlotGridProps) {
                           <span>{slot.weather.temperatureC}°</span>
                         )}
                         {slot.weather.precipitationProbability !== null && slot.weather.precipitationProbability >= 20 && (
-                          <span>{slot.weather.precipitationProbability}%</span>
+                          <span className="text-blue-700/80">☔ {slot.weather.precipitationProbability}%</span>
+                        )}
+                        {slot.weather.windSpeedKph !== null && slot.weather.windSpeedKph >= 18 && (
+                          <span className="text-gray-600/80">💨 {slot.weather.windSpeedKph}</span>
                         )}
                       </div>
                     )}
@@ -134,4 +137,20 @@ function formatDateShort(dateStr: string): string {
     day: "numeric",
     timeZone: "America/Los_Angeles",
   });
+}
+
+function formatWeatherTooltip(weather: NonNullable<TimeSlot["weather"]>): string {
+  const parts = [weather.label];
+
+  if (weather.temperatureC !== null) {
+    parts.push(`${weather.temperatureC}°C`);
+  }
+  if (weather.precipitationProbability !== null) {
+    parts.push(`${weather.precipitationProbability}% rain`);
+  }
+  if (weather.windSpeedKph !== null) {
+    parts.push(`${weather.windSpeedKph} km/h wind`);
+  }
+
+  return parts.join(" • ");
 }

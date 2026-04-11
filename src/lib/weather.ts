@@ -9,6 +9,7 @@ interface OpenMeteoResponse {
     temperature_2m?: number[];
     precipitation_probability?: number[];
     weather_code?: number[];
+    wind_speed_10m?: number[];
   };
 }
 
@@ -55,7 +56,10 @@ async function fetchLocationWeather(
     const url = new URL(OPEN_METEO_BASE);
     url.searchParams.set("latitude", String(lat));
     url.searchParams.set("longitude", String(lng));
-    url.searchParams.set("hourly", "temperature_2m,precipitation_probability,weather_code");
+    url.searchParams.set(
+      "hourly",
+      "temperature_2m,precipitation_probability,weather_code,wind_speed_10m"
+    );
     url.searchParams.set("forecast_days", "7");
     url.searchParams.set("timezone", "America/Los_Angeles");
 
@@ -69,13 +73,14 @@ async function fetchLocationWeather(
     const temps = data.hourly?.temperature_2m ?? [];
     const precip = data.hourly?.precipitation_probability ?? [];
     const codes = data.hourly?.weather_code ?? [];
+    const wind = data.hourly?.wind_speed_10m ?? [];
 
     const out = new Map<string, SlotWeather>();
     for (let i = 0; i < times.length; i++) {
       const time = times[i]; // 2026-04-11T08:00
       const [date, hhmm] = time.split("T");
       const key = normalizeSlotKey(date, hhmm.slice(0, 5));
-      out.set(key, formatWeather(temps[i], precip[i], codes[i]));
+      out.set(key, formatWeather(temps[i], precip[i], codes[i], wind[i]));
     }
 
     return out;
@@ -105,7 +110,8 @@ function normalizeSlotKey(date: string, time: string): string {
 function formatWeather(
   temperatureC?: number,
   precipitationProbability?: number,
-  weatherCode?: number
+  weatherCode?: number,
+  windSpeedKph?: number
 ): SlotWeather {
   const { label, emoji } = describeWeatherCode(weatherCode ?? null);
   return {
@@ -113,6 +119,7 @@ function formatWeather(
     precipitationProbability: Number.isFinite(precipitationProbability)
       ? Math.round(precipitationProbability as number)
       : null,
+    windSpeedKph: Number.isFinite(windSpeedKph) ? Math.round(windSpeedKph as number) : null,
     weatherCode: Number.isFinite(weatherCode) ? Math.round(weatherCode as number) : null,
     label,
     emoji,

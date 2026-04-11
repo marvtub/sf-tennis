@@ -92,6 +92,7 @@ export interface TimeSlot {
 export interface SlotWeather {
   temperatureC: number | null;
   precipitationProbability: number | null;
+  windSpeedKph: number | null;
   weatherCode: number | null;
   label: string;
   emoji: string;
