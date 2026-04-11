@@ -86,6 +86,15 @@ export interface TimeSlot {
   datetime: string; // ISO-ish: "2026-03-30 07:30:00"
   date: string; // "2026-03-30"
   time: string; // "07:30"
+  weather?: SlotWeather | null;
+}
+
+export interface SlotWeather {
+  temperatureC: number | null;
+  precipitationProbability: number | null;
+  weatherCode: number | null;
+  label: string;
+  emoji: string;
 }
 
 export interface TravelTime {

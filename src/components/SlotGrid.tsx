@@ -94,9 +94,21 @@ export function SlotGrid({ courts }: SlotGridProps) {
                     href={court.bookingUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="px-2 py-1 text-xs bg-green-50 text-green-700 rounded border border-green-200 hover:bg-green-100 transition-colors"
+                    className="px-2 py-1 text-xs bg-green-50 text-green-700 rounded border border-green-200 hover:bg-green-100 transition-colors min-w-[72px]"
+                    title={slot.weather ? `${slot.weather.label}${slot.weather.temperatureC !== null ? `, ${slot.weather.temperatureC}°C` : ""}${slot.weather.precipitationProbability !== null ? `, ${slot.weather.precipitationProbability}% rain` : ""}` : undefined}
                   >
-                    {slot.time}
+                    <div className="font-medium">{slot.time}</div>
+                    {slot.weather && (
+                      <div className="mt-0.5 flex items-center gap-1 text-[10px] text-green-800/80">
+                        <span>{slot.weather.emoji}</span>
+                        {slot.weather.temperatureC !== null && (
+                          <span>{slot.weather.temperatureC}°</span>
+                        )}
+                        {slot.weather.precipitationProbability !== null && slot.weather.precipitationProbability >= 20 && (
+                          <span>{slot.weather.precipitationProbability}%</span>
+                        )}
+                      </div>
+                    )}
                   </a>
                 ))}
               </div>
