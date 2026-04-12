@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { fetchAllCourts } from "@/lib/recus";
+import { enrichCourtsWithWeather } from "@/lib/weather";
 import {
   AVAILABILITY_CACHE_SECONDS,
   SPORT_ID_TENNIS,
@@ -59,8 +60,10 @@ export async function GET(request: NextRequest) {
       })
       .filter((loc) => loc.courts.length > 0);
 
+    const courtsWithWeather = await enrichCourtsWithWeather(courts);
+
     return NextResponse.json(
-      { courts, sport, city: cityId, fetchedAt: new Date().toISOString() },
+      { courts: courtsWithWeather, sport, city: cityId, fetchedAt: new Date().toISOString() },
       {
         headers: {
           "Cache-Control": `s-maxage=${AVAILABILITY_CACHE_SECONDS}, stale-while-revalidate=300`,
