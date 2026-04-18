@@ -1,3 +1,7 @@
+<!-- Demo video. GitHub renders mp4 files committed to the repo inline. -->
+
+https://github.com/marvtub/sf-tennis/raw/refs/heads/master/.github/demo.mp4
+
 # SF Tennis
 
 Real-time availability map for public tennis and pickleball courts in San Francisco and Mountain View. Live at [tennis.marvinaziz.de](https://tennis.marvinaziz.de).
