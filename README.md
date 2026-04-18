@@ -1,6 +1,6 @@
-<!-- Demo video. GitHub renders mp4 files committed to the repo inline. -->
+<!-- README preview (animated, no sound). Click for the full video with audio. -->
 
-https://github.com/marvtub/sf-tennis/raw/refs/heads/master/.github/demo.mp4
+[![Demo](.github/demo.gif)](https://github.com/marvtub/sf-tennis/raw/refs/heads/master/.github/demo.mp4)
 
 # SF Tennis
 
