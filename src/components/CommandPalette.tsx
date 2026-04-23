@@ -13,10 +13,12 @@ interface CommandPaletteProps {
   city: CityId;
   filter: AvailabilityFilter;
   availableDates: string[];
+  userLocationStatus: "idle" | "requesting" | "resolved" | "fallback" | "unsupported";
   onSelectCourt: (id: string) => void;
   onSportChange: (sport: Sport) => void;
   onCityChange: (city: CityId) => void;
   onFilterChange: (filter: AvailabilityFilter) => void;
+  onRequestLocation: () => void;
   onClose: () => void;
 }
 
@@ -36,10 +38,12 @@ export function CommandPalette({
   city,
   filter,
   availableDates,
+  userLocationStatus,
   onSelectCourt,
   onSportChange,
   onCityChange,
   onFilterChange,
+  onRequestLocation,
   onClose,
 }: CommandPaletteProps) {
   const [query, setQuery] = useState("");
@@ -158,8 +162,15 @@ export function CommandPalette({
         type: "filter",
         id: "filter-any",
         label: "Any day",
-        active: !filter.date,
-        filterValue: { ...filter, date: null },
+        active: !filter.date && !filter.weekendOnly,
+        filterValue: { ...filter, date: null, weekendOnly: false },
+      });
+      result.push({
+        type: "filter",
+        id: "filter-weekend",
+        label: "🌴 Weekend",
+        active: Boolean(filter.weekendOnly),
+        filterValue: { ...filter, date: null, weekendOnly: true },
       });
       for (const d of availableDates) {
         result.push({
@@ -317,10 +328,16 @@ export function CommandPalette({
           <div className="flex items-center gap-1.5 px-4 py-2 border-b bg-gray-50/50 flex-wrap flex-shrink-0">
             <Pill>{CITIES[city]?.shortLabel ?? city}</Pill>
             <Pill>{sport === "tennis" ? "🎾 Tennis" : "🏓 Pickleball"}</Pill>
-            {filter.date && (
-              <Pill onRemove={() => onFilterChange({ ...filter, date: null })}>
-                {formatDateLabel(filter.date)}
+            {filter.weekendOnly ? (
+              <Pill onRemove={() => onFilterChange({ ...filter, weekendOnly: false })}>
+                🌴 Weekend
               </Pill>
+            ) : (
+              filter.date && (
+                <Pill onRemove={() => onFilterChange({ ...filter, date: null })}>
+                  {formatDateLabel(filter.date)}
+                </Pill>
+              )
             )}
             {filter.timeFrom && (
               <Pill
@@ -363,6 +380,8 @@ export function CommandPalette({
             city={city}
             filter={filter}
             availableDates={availableDates}
+            userLocationStatus={userLocationStatus}
+            onRequestLocation={onRequestLocation}
             onSelectCourt={(id) => {
               onSelectCourt(id);
               onClose();
@@ -393,8 +412,8 @@ export function CommandPalette({
           <MobileTabButton
             active={mobileTab === "city"}
             onClick={() => setMobileTab("city")}
-            icon="📍"
-            label={CITIES[city]?.shortLabel ?? "City"}
+            icon={userLocationStatus === "resolved" ? "📍" : userLocationStatus === "requesting" ? "📡" : "📍"}
+            label={userLocationStatus === "resolved" ? "Near me" : CITIES[city]?.shortLabel ?? "City"}
           />
           <MobileTabButton
             active={mobileTab === "sport"}
@@ -431,6 +450,8 @@ function MobileContent({
   city,
   filter,
   availableDates,
+  userLocationStatus,
+  onRequestLocation,
   onSelectCourt,
   onSportChange,
   onCityChange,
@@ -444,6 +465,8 @@ function MobileContent({
   city: CityId;
   filter: AvailabilityFilter;
   availableDates: string[];
+  userLocationStatus: "idle" | "requesting" | "resolved" | "fallback" | "unsupported";
+  onRequestLocation: () => void;
   onSelectCourt: (id: string) => void;
   onSportChange: (sport: Sport) => void;
   onCityChange: (city: CityId) => void;
@@ -476,11 +499,30 @@ function MobileContent({
     const cityEntries = Object.entries(CITIES) as [CityId, CityConfig][];
     return (
       <div className="divide-y">
+        <MobileOptionRow
+          label={
+            userLocationStatus === "requesting"
+              ? "📡 Finding my location…"
+              : userLocationStatus === "resolved"
+              ? "📍 Refresh my location"
+              : "📍 Use my location"
+          }
+          active={userLocationStatus === "resolved"}
+          disabled={userLocationStatus === "unsupported"}
+          helper={
+            userLocationStatus === "unsupported"
+              ? "Location isn’t available on this device/browser"
+              : userLocationStatus === "fallback"
+              ? "Still using the city center — tap to try again"
+              : undefined
+          }
+          onSelect={onRequestLocation}
+        />
         {cityEntries.map(([id, c]) => (
           <MobileOptionRow
             key={id}
             label={c.label}
-            active={id === city}
+            active={id === city && userLocationStatus !== "resolved"}
             onSelect={() => onCityChange(id)}
           />
         ))}
@@ -510,15 +552,20 @@ function MobileContent({
       <div className="divide-y">
         <MobileOptionRow
           label="Any day"
-          active={!filter.date}
-          onSelect={() => onFilterChange({ ...filter, date: null })}
+          active={!filter.date && !filter.weekendOnly}
+          onSelect={() => onFilterChange({ ...filter, date: null, weekendOnly: false })}
+        />
+        <MobileOptionRow
+          label="🌴 Weekend"
+          active={Boolean(filter.weekendOnly)}
+          onSelect={() => onFilterChange({ ...filter, date: null, weekendOnly: true })}
         />
         {availableDates.map((d) => (
           <MobileOptionRow
             key={d}
             label={formatDateLabel(d)}
-            active={filter.date === d}
-            onSelect={() => onFilterChange({ ...filter, date: d })}
+            active={!filter.weekendOnly && filter.date === d}
+            onSelect={() => onFilterChange({ ...filter, date: d, weekendOnly: false })}
           />
         ))}
       </div>
@@ -674,19 +721,27 @@ function MobileOptionRow({
   label,
   active,
   onSelect,
+  helper,
+  disabled = false,
 }: {
   label: string;
   active: boolean;
   onSelect: () => void;
+  helper?: string;
+  disabled?: boolean;
 }) {
   return (
     <button
       onClick={onSelect}
-      className="w-full text-left px-4 py-4 flex items-center justify-between active:bg-gray-100 min-h-[56px]"
+      disabled={disabled}
+      className="w-full text-left px-4 py-4 flex items-center justify-between active:bg-gray-100 min-h-[56px] disabled:opacity-50"
     >
-      <span className={`text-base ${active ? "font-semibold text-blue-600" : "text-gray-800"}`}>
-        {label}
-      </span>
+      <div className="min-w-0">
+        <span className={`block text-base ${active ? "font-semibold text-blue-600" : "text-gray-800"}`}>
+          {label}
+        </span>
+        {helper && <span className="block text-xs text-gray-500 mt-0.5">{helper}</span>}
+      </div>
       {active && <span className="text-blue-600 text-lg">✓</span>}
     </button>
   );

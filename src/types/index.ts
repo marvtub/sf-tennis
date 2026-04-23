@@ -109,6 +109,7 @@ export interface TravelTime {
 
 export interface AvailabilityFilter {
   date: string | null; // "2026-03-30" or null for any day
+  weekendOnly?: boolean;
   timeFrom: string | null; // "09:00" or null
   timeTo: string | null; // "17:00" or null
 }

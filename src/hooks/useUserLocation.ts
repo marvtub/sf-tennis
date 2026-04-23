@@ -12,7 +12,7 @@ export interface UserLocation {
 
 interface UseUserLocationResult extends UserLocation {
   status: "idle" | "requesting" | "resolved" | "fallback" | "unsupported";
-  requestLocation: () => void;
+  requestLocation: (options?: { forceFresh?: boolean }) => void;
 }
 
 /**
@@ -30,6 +30,7 @@ export function useUserLocation(
   });
   const [geoResolved, setGeoResolved] = useState(false);
   const [requestVersion, setRequestVersion] = useState(0);
+  const [forceFresh, setForceFresh] = useState(false);
   const [status, setStatus] = useState<UseUserLocationResult["status"]>("idle");
 
   // Update fallback when city changes (only if geolocation hasn't resolved)
@@ -42,7 +43,8 @@ export function useUserLocation(
     }
   }, [cityId, city.lat, city.lng, geoResolved]);
 
-  const requestLocation = useCallback(() => {
+  const requestLocation = useCallback((options?: { forceFresh?: boolean }) => {
+    setForceFresh(Boolean(options?.forceFresh));
     setRequestVersion((v) => v + 1);
   }, []);
 
@@ -68,9 +70,13 @@ export function useUserLocation(
         setLocation({ lat: city.lat, lng: city.lng, isDefault: true });
         setStatus("fallback");
       },
-      { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 }
+      {
+        enableHighAccuracy: forceFresh,
+        timeout: forceFresh ? 15000 : 10000,
+        maximumAge: forceFresh ? 0 : 300000,
+      }
     );
-  }, [city.lat, city.lng, requestVersion]);
+  }, [city.lat, city.lng, forceFresh, requestVersion]);
 
   // Memoize so consumers get a stable reference when lat/lng haven't changed
   return useMemo(
