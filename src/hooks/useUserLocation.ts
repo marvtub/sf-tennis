@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { CITIES, DEFAULT_CITY } from "@/lib/constants";
 import type { CityId } from "@/lib/constants";
 
@@ -10,14 +10,16 @@ export interface UserLocation {
   isDefault: boolean; // true = fallback to city center
 }
 
+export type UserLocationStatus =
+  | "idle"
+  | "requesting"
+  | "resolved"
+  | "fallback"
+  | "denied"
+  | "unsupported";
+
 interface UseUserLocationResult extends UserLocation {
-  status:
-    | "idle"
-    | "requesting"
-    | "resolved"
-    | "fallback"
-    | "denied"
-    | "unsupported";
+  status: UserLocationStatus;
   requestLocation: (options?: { forceFresh?: boolean }) => void;
 }
 
@@ -36,9 +38,9 @@ export function useUserLocation(
   });
   const [geoResolved, setGeoResolved] = useState(false);
   const [requestVersion, setRequestVersion] = useState(0);
-  const [forceFresh, setForceFresh] = useState(false);
   const [shouldRequest, setShouldRequest] = useState(false);
-  const [status, setStatus] = useState<UseUserLocationResult["status"]>("idle");
+  const [status, setStatus] = useState<UserLocationStatus>("idle");
+  const forceFreshRef = useRef(false);
 
   // Update fallback when city changes (only if geolocation hasn't resolved)
   useEffect(() => {
@@ -52,7 +54,7 @@ export function useUserLocation(
   }, [cityId, city.lat, city.lng, geoResolved]);
 
   const requestLocation = useCallback((options?: { forceFresh?: boolean }) => {
-    setForceFresh(Boolean(options?.forceFresh));
+    forceFreshRef.current = Boolean(options?.forceFresh);
     setShouldRequest(true);
     setRequestVersion((v) => v + 1);
   }, []);
@@ -106,6 +108,7 @@ export function useUserLocation(
       return;
     }
 
+    const forceFresh = forceFreshRef.current;
     setStatus("requesting");
     navigator.geolocation.getCurrentPosition(
       (pos) => {
@@ -117,12 +120,14 @@ export function useUserLocation(
         setGeoResolved(true);
         setStatus("resolved");
         setShouldRequest(false);
+        forceFreshRef.current = false;
       },
       (error) => {
         setGeoResolved(false);
         setLocation({ lat: city.lat, lng: city.lng, isDefault: true });
         setStatus(error.code === error.PERMISSION_DENIED ? "denied" : "fallback");
         setShouldRequest(false);
+        forceFreshRef.current = false;
       },
       {
         enableHighAccuracy: forceFresh,
@@ -130,7 +135,7 @@ export function useUserLocation(
         maximumAge: forceFresh ? 0 : 300000,
       }
     );
-  }, [city.lat, city.lng, forceFresh, requestVersion, shouldRequest]);
+  }, [city.lat, city.lng, requestVersion, shouldRequest]);
 
   // Memoize so consumers get a stable reference when lat/lng haven't changed
   return useMemo(

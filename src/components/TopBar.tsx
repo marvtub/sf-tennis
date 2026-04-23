@@ -5,6 +5,7 @@ import { TimeSince } from "./TimeSince";
 import type { Friend } from "@/types";
 import type { Sport, CityId } from "@/lib/constants";
 import { CITIES } from "@/lib/constants";
+import type { UserLocationStatus } from "@/hooks/useUserLocation";
 
 interface TopBarProps {
   loading: boolean;
@@ -16,7 +17,7 @@ interface TopBarProps {
   sport: Sport;
   city: CityId;
   courtCount: number;
-  userLocationStatus: "idle" | "requesting" | "resolved" | "fallback" | "denied" | "unsupported";
+  userLocationStatus: UserLocationStatus;
   onRefresh: () => void;
   onRequestLocation: () => void;
   onToggleView: () => void;

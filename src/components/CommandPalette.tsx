@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import type { CourtLocation, TravelTime, AvailabilityFilter } from "@/types";
 import type { Sport, CityId, CityConfig } from "@/lib/constants";
 import { CITIES } from "@/lib/constants";
+import type { UserLocationStatus } from "@/hooks/useUserLocation";
 
 interface CommandPaletteProps {
   courts: CourtLocation[];
@@ -13,7 +14,7 @@ interface CommandPaletteProps {
   city: CityId;
   filter: AvailabilityFilter;
   availableDates: string[];
-  userLocationStatus: "idle" | "requesting" | "resolved" | "fallback" | "denied" | "unsupported";
+  userLocationStatus: UserLocationStatus;
   onSelectCourt: (id: string) => void;
   onSportChange: (sport: Sport) => void;
   onCityChange: (city: CityId) => void;
@@ -465,7 +466,7 @@ function MobileContent({
   city: CityId;
   filter: AvailabilityFilter;
   availableDates: string[];
-  userLocationStatus: "idle" | "requesting" | "resolved" | "fallback" | "denied" | "unsupported";
+  userLocationStatus: UserLocationStatus;
   onRequestLocation: () => void;
   onSelectCourt: (id: string) => void;
   onSportChange: (sport: Sport) => void;

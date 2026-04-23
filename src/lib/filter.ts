@@ -67,7 +67,7 @@ export function getAvailableDates(courts: CourtLocation[]): string[] {
 }
 
 function isWeekendDate(dateStr: string): boolean {
-  const date = new Date(`${dateStr}T12:00:00-07:00`);
-  const day = date.getDay();
+  const [y, m, d] = dateStr.split("-").map(Number);
+  const day = new Date(Date.UTC(y, m - 1, d)).getUTCDay();
   return day === 0 || day === 6;
 }
