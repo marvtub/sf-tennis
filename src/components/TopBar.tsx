@@ -5,6 +5,7 @@ import { TimeSince } from "./TimeSince";
 import type { Friend } from "@/types";
 import type { Sport, CityId } from "@/lib/constants";
 import { CITIES } from "@/lib/constants";
+import type { UserLocationStatus } from "@/hooks/useUserLocation";
 
 interface TopBarProps {
   loading: boolean;
@@ -16,7 +17,7 @@ interface TopBarProps {
   sport: Sport;
   city: CityId;
   courtCount: number;
-  userLocationStatus: "idle" | "requesting" | "resolved" | "fallback" | "unsupported";
+  userLocationStatus: UserLocationStatus;
   onRefresh: () => void;
   onRequestLocation: () => void;
   onToggleView: () => void;
@@ -60,6 +61,8 @@ export function TopBar({
       ? "Locating…"
       : userLocationStatus === "resolved"
       ? "My location"
+      : userLocationStatus === "denied"
+      ? "Location blocked"
       : userLocationStatus === "unsupported"
       ? "Location unavailable"
       : "Use my location";
@@ -127,6 +130,8 @@ export function TopBar({
             className={`px-2 py-1 text-xs rounded transition-colors disabled:opacity-50 ${
               userLocationStatus === "resolved"
                 ? "bg-blue-100 text-blue-700 hover:bg-blue-200"
+                : userLocationStatus === "denied"
+                ? "bg-amber-50 text-amber-700 hover:bg-amber-100"
                 : userLocationStatus === "unsupported"
                 ? "bg-gray-100 text-gray-400 cursor-not-allowed"
                 : "bg-gray-100 hover:bg-gray-200"

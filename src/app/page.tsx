@@ -66,6 +66,7 @@ export default function Home() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [filter, setFilter] = useState<AvailabilityFilter>({
     date: null,
+    weekendOnly: false,
     timeFrom: null,
     timeTo: null,
   });
@@ -127,7 +128,7 @@ export default function Home() {
         courtCount={courts.length}
         userLocationStatus={userLocation.status}
         onRefresh={refresh}
-        onRequestLocation={userLocation.requestLocation}
+        onRequestLocation={() => userLocation.requestLocation({ forceFresh: true })}
         onToggleView={() => setViewMode((m) => (m === "map" ? "list" : "map"))}
         onShowSearch={() => setShowSearch(true)}
         onShowLogin={() => setShowLogin(true)}
@@ -239,6 +240,8 @@ export default function Home() {
           onSportChange={handleSportChange}
           onCityChange={handleCityChange}
           onFilterChange={setFilter}
+          onRequestLocation={() => userLocation.requestLocation({ forceFresh: true })}
+          userLocationStatus={userLocation.status}
           onClose={() => setShowSearch(false)}
         />
       )}

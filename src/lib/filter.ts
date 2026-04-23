@@ -8,13 +8,14 @@ export function applyFilter(
   courts: CourtLocation[],
   filter: AvailabilityFilter
 ): CourtLocation[] {
-  const hasFilter = filter.date || filter.timeFrom || filter.timeTo;
+  const hasFilter = filter.date || filter.weekendOnly || filter.timeFrom || filter.timeTo;
   if (!hasFilter) return courts;
 
   return courts.map((loc) => {
     const filteredCourts = loc.courts.map((court) => {
       const filteredSlots = court.availableSlots.filter((slot) => {
         if (filter.date && slot.date !== filter.date) return false;
+        if (filter.weekendOnly && !isWeekendDate(slot.date)) return false;
         if (filter.timeFrom && slot.time < filter.timeFrom) return false;
         if (filter.timeTo && slot.time > filter.timeTo) return false;
         return true;
@@ -63,4 +64,10 @@ export function getAvailableDates(courts: CourtLocation[]): string[] {
     }
   }
   return Array.from(dates).sort();
+}
+
+function isWeekendDate(dateStr: string): boolean {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  const day = new Date(Date.UTC(y, m - 1, d)).getUTCDay();
+  return day === 0 || day === 6;
 }
