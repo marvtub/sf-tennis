@@ -125,7 +125,9 @@ export default function Home() {
         sport={sport}
         city={city}
         courtCount={courts.length}
+        userLocationStatus={userLocation.status}
         onRefresh={refresh}
+        onRequestLocation={userLocation.requestLocation}
         onToggleView={() => setViewMode((m) => (m === "map" ? "list" : "map"))}
         onShowSearch={() => setShowSearch(true)}
         onShowLogin={() => setShowLogin(true)}

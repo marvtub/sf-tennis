@@ -16,7 +16,9 @@ interface TopBarProps {
   sport: Sport;
   city: CityId;
   courtCount: number;
+  userLocationStatus: "idle" | "requesting" | "resolved" | "fallback" | "unsupported";
   onRefresh: () => void;
+  onRequestLocation: () => void;
   onToggleView: () => void;
   onShowSearch: () => void;
   onShowLogin: () => void;
@@ -37,7 +39,9 @@ export function TopBar({
   sport,
   city,
   courtCount,
+  userLocationStatus,
   onRefresh,
+  onRequestLocation,
   onToggleView,
   onShowSearch,
   onShowLogin,
@@ -51,6 +55,14 @@ export function TopBar({
   const cityConfig = CITIES[city];
   const sportEmoji = sport === "tennis" ? "🎾" : "🏓";
   const sportLabel = sport === "tennis" ? "Tennis" : "Pickleball";
+  const locationLabel =
+    userLocationStatus === "requesting"
+      ? "Locating…"
+      : userLocationStatus === "resolved"
+      ? "My location"
+      : userLocationStatus === "unsupported"
+      ? "Location unavailable"
+      : "Use my location";
 
   return (
     <div className="absolute top-0 left-0 right-0 z-10 bg-white/90 backdrop-blur-sm border-b shadow-sm">
@@ -106,6 +118,22 @@ export function TopBar({
               ↻
             </button>
           )}
+
+          <button
+            onClick={onRequestLocation}
+            disabled={userLocationStatus === "requesting"}
+            aria-label={locationLabel}
+            title={locationLabel}
+            className={`px-2 py-1 text-xs rounded transition-colors disabled:opacity-50 ${
+              userLocationStatus === "resolved"
+                ? "bg-blue-100 text-blue-700 hover:bg-blue-200"
+                : userLocationStatus === "unsupported"
+                ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                : "bg-gray-100 hover:bg-gray-200"
+            }`}
+          >
+            {userLocationStatus === "requesting" ? "📡" : "📍"}
+          </button>
 
           {/* Map/List toggle */}
           <button
