@@ -59,7 +59,7 @@ export default function Home() {
   const travelTimes = useTravelTimes(rawCourts, userLocation);
   const auth = useAuth();
   const { favourites, toggleFavourite } = useFavourites();
-  const { friends, addFriend, removeFriend } = useFriends();
+  const { friends, addFriend, removeFriend } = useFriends(auth.authenticated);
   const { history, addEntry, deleteEntry } = useHistory(auth.authenticated);
 
   // UI state
