@@ -8,6 +8,8 @@ export const DISCOVERY_LINK_HEADER = [
   '</docs.md>; rel="alternate"; type="text/markdown"; title="SF Tennis docs"',
   '</openapi.json>; rel="service-desc"; type="application/vnd.oai.openapi+json"',
   '</.well-known/api-catalog>; rel="api-catalog"; type="application/linkset+json"',
+  '</.well-known/oauth-authorization-server>; rel="oauth-authorization-server"; type="application/json"',
+  '</.well-known/oauth-protected-resource>; rel="oauth-protected-resource"; type="application/json"',
   '</.well-known/agent-skills/index.json>; rel="agent-skills"; type="application/json"',
   '</.well-known/agent.json>; rel="agent-card"; type="application/json"',
 ].join(", ");
@@ -34,6 +36,8 @@ Repository: ${GITHUB_URL}
 - Markdown docs: ${SITE_URL}/docs.md
 - OpenAPI contract: ${SITE_URL}/openapi.json
 - API catalog: ${SITE_URL}/.well-known/api-catalog
+- OAuth authorization metadata: ${SITE_URL}/.well-known/oauth-authorization-server
+- OAuth protected resource metadata: ${SITE_URL}/.well-known/oauth-protected-resource
 - Agent skills: ${SITE_URL}/.well-known/agent-skills/index.json
 
 ## Recommended first request
@@ -54,6 +58,8 @@ SF Tennis helps people find playable public tennis and pickleball courts in San 
 - Agent guide: ${SITE_URL}/llms.txt
 - OpenAPI: ${SITE_URL}/openapi.json
 - API catalog: ${SITE_URL}/.well-known/api-catalog
+- OAuth authorization metadata: ${SITE_URL}/.well-known/oauth-authorization-server
+- OAuth protected resource metadata: ${SITE_URL}/.well-known/oauth-protected-resource
 - Agent skills: ${SITE_URL}/.well-known/agent-skills/index.json
 - GitHub repo: ${GITHUB_URL}
 
@@ -83,6 +89,7 @@ Protected automation endpoint:
 - POST creates a match entry.
 - PUT updates a match entry.
 - DELETE deletes a match entry.
+- OAuth-style client_credentials metadata is published for discovery. If the user gives you the API key as a client_secret, /oauth/token can exchange it for the same bearer token shape used by /api/history/external.
 
 Do not guess or invent API keys, PINs, home addresses, friend addresses, or private history. Ask the user for credentials out of band when needed.
 
@@ -130,6 +137,8 @@ Last updated: ${LAST_UPDATED}
 - Markdown docs: ${SITE_URL}/docs.md
 - OpenAPI: ${SITE_URL}/openapi.json
 - API catalog: ${SITE_URL}/.well-known/api-catalog
+- OAuth authorization metadata: ${SITE_URL}/.well-known/oauth-authorization-server
+- OAuth protected resource metadata: ${SITE_URL}/.well-known/oauth-protected-resource
 - Agent skills: ${SITE_URL}/.well-known/agent-skills/index.json
 - A2A-style agent card: ${SITE_URL}/.well-known/agent.json
 - GitHub: ${GITHUB_URL}
@@ -151,6 +160,8 @@ Read the machine contract at ${SITE_URL}/openapi.json before writing code agains
 ## Protected API
 
 ${SITE_URL}/api/history/external uses a bearer API key. Use it only when the user explicitly supplies an API key and asks you to read or modify their match history.
+
+For agents that require OAuth discovery, SF Tennis publishes OAuth authorization server metadata and OAuth protected resource metadata. The token endpoint supports client_credentials by treating the user-provided API key as the client_secret and returns a bearer token for the same protected history API.
 
 ## Safe agent behavior
 
@@ -197,6 +208,7 @@ Use this skill when a user asks about public tennis or pickleball availability i
 2. Read ${SITE_URL}/openapi.json before calling any endpoint.
 3. Use public endpoints for availability. They do not require authentication.
 4. Use /api/history/external only when the user explicitly provides an API key.
+5. If the agent requires OAuth discovery, read /.well-known/oauth-authorization-server and /.well-known/oauth-protected-resource. The client_credentials exchange accepts the user-provided API key as client_secret.
 
 ## Public availability workflow
 

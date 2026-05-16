@@ -19,6 +19,8 @@ SF Tennis is designed to be usable by humans, search crawlers, and coding agents
 | Markdown docs | [`/docs.md`](https://tennis.marvinaziz.de/docs.md) | Markdown mirror for tools that prefer text |
 | OpenAPI | [`/openapi.json`](https://tennis.marvinaziz.de/openapi.json) | Machine-readable API contract |
 | API catalog | [`/.well-known/api-catalog`](https://tennis.marvinaziz.de/.well-known/api-catalog) | RFC 9727 linkset discovery |
+| OAuth metadata | [`/.well-known/oauth-authorization-server`](https://tennis.marvinaziz.de/.well-known/oauth-authorization-server) | OAuth discovery for the history API |
+| Protected resource | [`/.well-known/oauth-protected-resource`](https://tennis.marvinaziz.de/.well-known/oauth-protected-resource) | OAuth protected resource metadata |
 | Agent Skills | [`/.well-known/agent-skills/index.json`](https://tennis.marvinaziz.de/.well-known/agent-skills/index.json) | Skill discovery for agents |
 | Agent card | [`/.well-known/agent.json`](https://tennis.marvinaziz.de/.well-known/agent.json) | Capability card for agent ecosystems |
 
@@ -83,6 +85,8 @@ curl -H "Authorization: Bearer $API_KEY" https://tennis.marvinaziz.de/api/histor
 `GET` returns `{ history, friends, courtsUrl }`. `POST`/`PUT`/`DELETE` accept JSON bodies — see `src/app/api/history/external/route.ts` for the exact shape.
 
 Agents should read [`/llms.txt`](https://tennis.marvinaziz.de/llms.txt) and [`/openapi.json`](https://tennis.marvinaziz.de/openapi.json) before calling this endpoint, and should never print bearer tokens, friend addresses, or private history in public output.
+
+For clients that require OAuth-style discovery, `/.well-known/oauth-authorization-server` and `/.well-known/oauth-protected-resource` describe a `client_credentials` flow where the user-provided `API_KEY` is used as `client_secret` and exchanged at `/oauth/token` for the same bearer token shape.
 
 ## Notes
 

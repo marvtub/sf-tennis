@@ -113,7 +113,7 @@ const openapi = {
       get: {
         tags: ["History"],
         summary: "List user match history for authorized automations.",
-        security: [{ bearerApiKey: [] }],
+        security: [{ bearerApiKey: [] }, { oauthClientCredentials: ["history:read"] }],
         responses: {
           "200": {
             description: "History and friend display names.",
@@ -129,7 +129,7 @@ const openapi = {
       post: {
         tags: ["History"],
         summary: "Create a match history entry.",
-        security: [{ bearerApiKey: [] }],
+        security: [{ bearerApiKey: [] }, { oauthClientCredentials: ["history:write"] }],
         requestBody: {
           required: true,
           content: {
@@ -154,7 +154,7 @@ const openapi = {
       put: {
         tags: ["History"],
         summary: "Update a match history entry.",
-        security: [{ bearerApiKey: [] }],
+        security: [{ bearerApiKey: [] }, { oauthClientCredentials: ["history:write"] }],
         requestBody: {
           required: true,
           content: {
@@ -178,7 +178,7 @@ const openapi = {
       delete: {
         tags: ["History"],
         summary: "Delete a match history entry.",
-        security: [{ bearerApiKey: [] }],
+        security: [{ bearerApiKey: [] }, { oauthClientCredentials: ["history:write"] }],
         requestBody: {
           required: true,
           content: {
@@ -205,6 +205,18 @@ const openapi = {
         type: "http",
         scheme: "bearer",
         description: "User-owned API key configured as API_KEY on the server.",
+      },
+      oauthClientCredentials: {
+        type: "oauth2",
+        flows: {
+          clientCredentials: {
+            tokenUrl: `${SITE_URL}/oauth/token`,
+            scopes: {
+              "history:read": "Read user match history.",
+              "history:write": "Create, update, and delete user match history.",
+            },
+          },
+        },
       },
     },
     schemas: {

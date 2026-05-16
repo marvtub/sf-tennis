@@ -25,9 +25,10 @@ Public agent docs and discovery live in static App Router routes:
 - `/llms.txt` and `/llm.txt` token-efficient agent guide.
 - `/docs.md` markdown mirror of the docs page.
 - `/openapi.json` OpenAPI 3.1 contract for public availability and external history APIs.
-- `/.well-known/api-catalog`, `/.well-known/agent.json`, and `/.well-known/agent-skills/index.json` for discovery.
+- `/.well-known/api-catalog`, `/.well-known/agent.json`, `/.well-known/agent-skills/index.json`, `/.well-known/oauth-authorization-server`, and `/.well-known/oauth-protected-resource` for discovery.
+- `/oauth/token` supports a narrow `client_credentials` compatibility flow: the user-provided `API_KEY` is the `client_secret`, and the returned bearer token is the same history API key.
 
-`src/middleware.ts` also adds Link discovery headers on `/` and `/docs`, and serves markdown for those pages when `Accept: text/markdown` is requested. Keep these routes truthful: the app has API-key automation, not OAuth or MCP access.
+`src/middleware.ts` also adds Link discovery headers on `/` and `/docs`, and serves markdown for those pages when `Accept: text/markdown` is requested. Keep these routes truthful: the app has API-key automation with OAuth-compatible metadata, not a full user-delegated OAuth authorization flow or MCP access.
 
 ### Data flow for court availability (`src/lib/recus.ts`)
 

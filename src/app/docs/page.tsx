@@ -40,6 +40,8 @@ const discoveryLinks = [
   ["Markdown docs", "/docs.md"],
   ["OpenAPI", "/openapi.json"],
   ["API catalog", "/.well-known/api-catalog"],
+  ["OAuth metadata", "/.well-known/oauth-authorization-server"],
+  ["Protected resource", "/.well-known/oauth-protected-resource"],
   ["Agent skills", "/.well-known/agent-skills/index.json"],
   ["Agent card", "/.well-known/agent.json"],
   ["GitHub repo", GITHUB_URL],

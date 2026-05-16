@@ -13,6 +13,7 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { TopBar } from "@/components/TopBar";
 import { LoadingSkeleton } from "@/components/LoadingSkeleton";
 import { ErrorBanner } from "@/components/ErrorBanner";
+import { WebMcpBridge } from "@/components/WebMcpBridge";
 import { applyFilter, getAvailableDates } from "@/lib/filter";
 
 // Lazy-load dialogs — only fetched when user opens them
@@ -135,6 +136,7 @@ export default function Home() {
 
   return (
     <main className="relative h-screen w-screen overflow-hidden">
+      <WebMcpBridge />
       <div className="sr-only">
         <h1>SF Tennis live public court availability</h1>
         <p>
