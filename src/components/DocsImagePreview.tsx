@@ -48,7 +48,7 @@ export function DocsImagePreview({ images }: { images: DocsPreviewImage[] }) {
             key={image.src}
             type="button"
             onClick={() => setActiveIndex(index)}
-            className="group block overflow-hidden rounded-lg border border-slate-200 bg-white text-left shadow-sm transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600"
+            className="group block overflow-hidden rounded-lg border border-slate-200 bg-white text-left shadow-sm transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 dark:border-slate-800 dark:bg-slate-900 dark:hover:border-slate-700"
             aria-label={`${image.caption}. ${image.description} Open larger preview`}
           >
             <img
@@ -58,13 +58,13 @@ export function DocsImagePreview({ images }: { images: DocsPreviewImage[] }) {
               height={720}
               loading="eager"
               decoding="async"
-              className="aspect-video w-full bg-slate-100 object-cover"
+              className="aspect-video w-full bg-slate-100 object-cover dark:bg-slate-800"
             />
-            <span className="block border-t border-slate-200 px-4 py-3">
-              <span className="block text-sm font-semibold text-slate-950">
+            <span className="block border-t border-slate-200 px-4 py-3 dark:border-slate-800">
+              <span className="block text-sm font-semibold text-slate-950 dark:text-white">
                 {image.caption}
               </span>
-              <span className="mt-1 block text-xs leading-5 text-slate-500">
+              <span className="mt-1 block text-xs leading-5 text-slate-500 dark:text-slate-400">
                 {image.description}
               </span>
             </span>
@@ -81,27 +81,27 @@ export function DocsImagePreview({ images }: { images: DocsPreviewImage[] }) {
           onClick={() => setActiveIndex(null)}
         >
           <div
-            className="max-h-full w-full max-w-6xl overflow-hidden rounded-lg bg-white shadow-2xl"
+            className="max-h-full w-full max-w-6xl overflow-hidden rounded-lg bg-white shadow-2xl dark:bg-slate-950"
             onClick={(event) => event.stopPropagation()}
           >
-            <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
+            <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3 dark:border-slate-800">
               <div>
-                <h3 className="text-sm font-semibold text-slate-950">
+                <h3 className="text-sm font-semibold text-slate-950 dark:text-white">
                   {activeImage.caption}
                 </h3>
-                <p className="text-xs text-slate-500">
+                <p className="text-xs text-slate-500 dark:text-slate-400">
                   {activeIndex + 1} of {images.length}
                 </p>
               </div>
               <button
                 type="button"
                 onClick={() => setActiveIndex(null)}
-                className="rounded-md px-2 py-1 text-sm font-medium text-slate-500 transition hover:bg-slate-100 hover:text-slate-950 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600"
+                className="rounded-md px-2 py-1 text-sm font-medium text-slate-500 transition hover:bg-slate-100 hover:text-slate-950 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 dark:text-slate-400 dark:hover:bg-slate-900 dark:hover:text-white"
               >
                 Close
               </button>
             </div>
-            <div className="bg-slate-100 p-2 sm:p-4">
+            <div className="bg-slate-100 p-2 dark:bg-slate-900 sm:p-4">
               <img
                 src={activeImage.src}
                 alt={activeImage.alt}
@@ -110,23 +110,23 @@ export function DocsImagePreview({ images }: { images: DocsPreviewImage[] }) {
                 className="max-h-[78vh] w-full rounded-md object-contain"
               />
             </div>
-            <div className="flex items-center justify-between gap-3 border-t border-slate-200 px-4 py-3 text-sm">
+            <div className="flex items-center justify-between gap-3 border-t border-slate-200 px-4 py-3 text-sm dark:border-slate-800">
               <button
                 type="button"
                 onClick={() =>
                   setActiveIndex((activeIndex - 1 + images.length) % images.length)
                 }
-                className="rounded-md px-2 py-1 font-medium text-slate-600 transition hover:bg-slate-100 hover:text-slate-950 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600"
+                className="rounded-md px-2 py-1 font-medium text-slate-600 transition hover:bg-slate-100 hover:text-slate-950 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 dark:text-slate-300 dark:hover:bg-slate-900 dark:hover:text-white"
               >
                 Previous
               </button>
-              <p className="hidden text-center text-slate-500 sm:block">
+              <p className="hidden text-center text-slate-500 dark:text-slate-400 sm:block">
                 {activeImage.description}
               </p>
               <button
                 type="button"
                 onClick={() => setActiveIndex((activeIndex + 1) % images.length)}
-                className="rounded-md px-2 py-1 font-medium text-slate-600 transition hover:bg-slate-100 hover:text-slate-950 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600"
+                className="rounded-md px-2 py-1 font-medium text-slate-600 transition hover:bg-slate-100 hover:text-slate-950 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 dark:text-slate-300 dark:hover:bg-slate-900 dark:hover:text-white"
               >
                 Next
               </button>

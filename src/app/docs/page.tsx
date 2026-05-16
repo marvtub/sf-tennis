@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { DocsImagePreview } from "@/components/DocsImagePreview";
+import { DocsThemeProvider, DocsThemeToggle } from "@/components/DocsTheme";
 import {
   GITHUB_PROFILE_URL,
   GITHUB_URL,
@@ -32,26 +33,26 @@ export const metadata: Metadata = {
 
 const sidebarGroups = [
   {
-    title: "Get started",
+    title: "Start here",
     links: [
       ["Overview", "#overview"],
-      ["Product screenshots", "#screenshots"],
-      ["Example requests", "#examples"],
+      ["Product views", "#screenshots"],
+      ["Copy-ready prompts", "#examples"],
     ],
   },
   {
-    title: "API reference",
+    title: "Reference",
     links: [
       ["Availability", "#availability-api"],
       ["Travel", "#travel-api"],
-      ["Discovery files", "#discovery"],
+      ["Agent entry points", "#discovery"],
     ],
   },
   {
-    title: "Operations",
+    title: "Use safely",
     links: [
-      ["Safety notes", "#safety"],
-      ["Resources", "#resources"],
+      ["Good behavior", "#safety"],
+      ["Project links", "#resources"],
     ],
   },
 ];
@@ -60,31 +61,31 @@ const screenshots = [
   {
     src: "/screenshots/map-overview.webp",
     alt: "SF Tennis map overview of San Francisco court locations",
-    caption: "Map-first discovery",
-    description: "Court status, location, and availability at a glance.",
+    caption: "Find playable courts",
+    description: "Scan the map for courts with slots today or later this week.",
   },
   {
     src: "/screenshots/court-details.webp",
     alt: "SF Tennis court detail panel with live slot availability",
-    caption: "Court details",
-    description: "Slot-level availability, court counts, and booking links.",
+    caption: "Check the exact slots",
+    description: "Open a court to see times, court counts, and the rec.us booking link.",
   },
   {
     src: "/screenshots/keyboard-search.webp",
     alt: "SF Tennis keyboard search over public court locations",
-    caption: "Keyboard search",
-    description: "Fast filtering for courts, sports, cities, and time windows.",
+    caption: "Filter fast",
+    description: "Search by court, sport, city, day, or time window.",
   },
 ];
 
 const examples = [
   {
     title: "Find courts tonight",
-    text: `Use SF Tennis at ${SITE_URL} to find public tennis courts in San Francisco with open slots tonight. Start from ${SITE_URL}/llms.txt, call the public courts API, prefer courts with availability today, and summarize the top options with location names, times, and any available weather context.`,
+    text: `Use SF Tennis at ${SITE_URL} to find open tennis courts in San Francisco tonight. Start with ${SITE_URL}/llms.txt, then call ${SITE_URL}/api/courts?sport=tennis&city=sf. Prefer courts with slots today and include the source URL.`,
   },
   {
     title: "Plan a pickleball session",
-    text: `Use SF Tennis at ${SITE_URL} to find pickleball availability in Mountain View this week. Filter for weekend slots, return a concise plan, and include the API URLs used so the result can be verified.`,
+    text: `Use SF Tennis at ${SITE_URL} to plan a weekend pickleball session in Mountain View. Use the public courts API, return the best courts and time windows, and include the API URL used.`,
   },
   {
     title: "Compare nearby options",
@@ -96,22 +97,22 @@ const discoveryLinks = [
   {
     label: "Integration guide",
     href: "/llms.txt",
-    description: "Compact text guide for API workflows.",
+    description: "Best first stop for agents. Explains what the app can do and where to start.",
   },
   {
     label: "Markdown docs",
     href: "/docs.md",
-    description: "Plain Markdown mirror of this documentation.",
+    description: "Same guide as this page, formatted for tools that prefer plain text.",
   },
   {
     label: "OpenAPI",
     href: "/openapi.json",
-    description: "Machine-readable contract for availability and travel APIs.",
+    description: "Exact public endpoint shapes for code, agents, and API clients.",
   },
   {
     label: "API catalog",
     href: "/.well-known/api-catalog",
-    description: "Linkset discovery for public API resources.",
+    description: "Machine-readable list of the public API surfaces.",
   },
   {
     label: "GitHub repository",
@@ -125,17 +126,17 @@ const endpointGroups = [
     id: "availability-api",
     title: "Availability API",
     description:
-      "Read-only endpoints for live court inventory, slot availability, and service health.",
+      "Use this when you need court names, locations, slot counts, and available times.",
     endpoints: [
       ["GET", "/api/courts?sport=tennis&city=sf", "Court availability by sport and city."],
-      ["GET", "/api/health", "Basic service health check."],
+      ["GET", "/api/health", "Simple service health check."],
     ],
   },
   {
     id: "travel-api",
     title: "Travel API",
     description:
-      "Public travel-time helper for comparing court options from a starting coordinate.",
+      "Use this when a user gives coordinates and wants to compare travel time.",
     endpoints: [
       ["GET", "/api/directions", "Walking and driving estimates for up to 50 locations."],
     ],
@@ -152,30 +153,32 @@ const socialLinks = [
 
 export default function DocsPage() {
   return (
-    <main className="min-h-screen bg-white text-slate-950">
-      <MobileHeader />
-      <Sidebar />
+    <DocsThemeProvider>
+      <main className="min-h-screen bg-white text-slate-950 transition-colors dark:bg-slate-950 dark:text-slate-100">
+        <MobileHeader />
+        <Sidebar />
+        <OnThisPage />
 
-      <div className="lg:pl-72">
-        <article className="max-w-5xl px-5 py-10 sm:px-8 sm:py-14 lg:px-12">
+        <div className="lg:pl-72 xl:pr-64">
+          <article className="max-w-3xl px-5 py-10 sm:px-8 sm:py-14 lg:px-12">
           <header id="overview" className="scroll-mt-24">
-            <p className="text-sm font-medium text-emerald-700">
-              Documentation
+            <p className="text-sm font-medium text-emerald-700 dark:text-emerald-400">
+              Public court guide
             </p>
-            <h1 className="mt-3 text-4xl font-semibold tracking-tight text-slate-950 sm:text-5xl">
+            <h1 className="mt-3 text-4xl font-semibold tracking-tight text-slate-950 dark:text-white sm:text-5xl">
               SF Tennis
             </h1>
-            <p className="mt-5 max-w-2xl text-lg leading-8 text-slate-600">
-              Live public tennis and pickleball availability for San Francisco
-              and Mountain View, with a compact API surface for availability and
-              planning workflows.
+            <p className="mt-5 max-w-2xl text-lg leading-8 text-slate-600 dark:text-slate-300">
+              Find real public tennis and pickleball openings in San Francisco
+              and Mountain View. Users get a fast map; agents get simple public
+              endpoints and copy-ready prompts.
             </p>
 
-            <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-slate-500">
+            <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-slate-500 dark:text-slate-400">
               <span>Updated {LAST_UPDATED}</span>
-              <span className="hidden h-1 w-1 rounded-full bg-slate-300 sm:inline-block" />
+              <span className="hidden h-1 w-1 rounded-full bg-slate-300 dark:bg-slate-700 sm:inline-block" />
               <span>Cloudflare Workers</span>
-              <span className="hidden h-1 w-1 rounded-full bg-slate-300 sm:inline-block" />
+              <span className="hidden h-1 w-1 rounded-full bg-slate-300 dark:bg-slate-700 sm:inline-block" />
               <span>OpenAPI 3.1</span>
             </div>
 
@@ -189,8 +192,8 @@ export default function DocsPage() {
           <Section
             id="screenshots"
             eyebrow="Product"
-            title="Screenshots"
-            description="Click any screenshot to open a larger preview. The current set was captured from the running product with Playwright."
+            title="Product views"
+            description="The app is built for quick scanning first. Click a screenshot to inspect it in a larger preview."
           >
             <DocsImagePreview images={screenshots} />
           </Section>
@@ -198,8 +201,8 @@ export default function DocsPage() {
           <Section
             id="examples"
             eyebrow="Guides"
-            title="Example requests"
-            description="Short requests that point agents to the live site and map cleanly to the public API."
+            title="Copy-ready prompts"
+            description="Use these as starting points with an agent. Each one names the live site and the API source to check."
           >
             <div className="space-y-5">
               {examples.map((example) => (
@@ -211,8 +214,8 @@ export default function DocsPage() {
           <Section
             id="api"
             eyebrow="Reference"
-            title="API"
-            description="Use public endpoints for live court availability, travel estimates, and health checks."
+            title="Public API"
+            description="The API is intentionally small: live slots, travel estimates, and a health check."
           >
             <div className="space-y-10">
               {endpointGroups.map((group) => (
@@ -224,19 +227,19 @@ export default function DocsPage() {
           <Section
             id="discovery"
             eyebrow="Reference"
-            title="Discovery files"
-            description="These URLs are intentionally plain links so they stay easy to scan, copy, and inspect."
+            title="Agent entry points"
+            description="These links help tools understand SF Tennis without scraping the map UI."
           >
             <ResourceList items={discoveryLinks} />
           </Section>
 
           <Section
             id="safety"
-            eyebrow="Operations"
-            title="Safety notes"
-            description="The public availability API is safe to call without credentials, but it still represents live upstream data."
+            eyebrow="Use safely"
+            title="Good behavior"
+            description="The data is public, but it is still live availability. Keep answers grounded in what the API returns."
           >
-            <ul className="space-y-3 text-sm leading-7 text-slate-600">
+            <ul className="space-y-3 text-sm leading-7 text-slate-600 dark:text-slate-300">
               <li>Report unavailable live data instead of guessing.</li>
               <li>Prefer the API contract over scraping the client UI.</li>
               <li>Include source URLs in summaries so results can be verified.</li>
@@ -246,14 +249,15 @@ export default function DocsPage() {
           <Section
             id="resources"
             eyebrow="Resources"
-            title="Links"
-            description="Project, profile, and social links for Marvin Aziz."
+            title="Project links"
+            description="Source, project, and profile links for Marvin Aziz."
           >
             <SocialLinks />
           </Section>
-        </article>
-      </div>
-    </main>
+          </article>
+        </div>
+      </main>
+    </DocsThemeProvider>
   );
 }
 
@@ -261,22 +265,25 @@ function MobileHeader() {
   const links = sidebarGroups.flatMap((group) => group.links);
 
   return (
-    <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/95 px-5 py-3 backdrop-blur lg:hidden">
+    <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/95 px-5 py-3 backdrop-blur dark:border-slate-800 dark:bg-slate-950/95 lg:hidden">
       <div className="flex items-center justify-between">
-        <a href="/" className="text-sm font-semibold text-slate-950">
+        <a href="/" className="text-sm font-semibold text-slate-950 dark:text-white">
           SF Tennis
         </a>
-        <AppCta className="px-3 py-1.5 text-xs" />
+        <div className="flex items-center gap-2">
+          <DocsThemeToggle />
+          <AppCta className="px-3 py-1.5 text-xs" />
+        </div>
       </div>
       <nav
         aria-label="Documentation sections"
-        className="mt-3 flex gap-4 overflow-x-auto pb-1 text-sm text-slate-600"
+        className="mt-3 flex gap-4 overflow-x-auto pb-1 text-sm text-slate-600 dark:text-slate-400"
       >
         {links.map(([label, href]) => (
           <a
             key={href}
             href={href}
-            className="shrink-0 transition hover:text-slate-950"
+            className="shrink-0 transition hover:text-slate-950 dark:hover:text-white"
           >
             {label}
           </a>
@@ -288,12 +295,12 @@ function MobileHeader() {
 
 function Sidebar() {
   return (
-    <aside className="fixed inset-y-0 left-0 z-30 hidden w-72 flex-col border-r border-slate-200 bg-white lg:flex">
-      <div className="border-b border-slate-200 px-6 py-5">
-        <a href="/" className="block text-base font-semibold text-slate-950">
+    <aside className="fixed inset-y-0 left-0 z-30 hidden w-72 flex-col border-r border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950 lg:flex">
+      <div className="border-b border-slate-200 px-6 py-5 dark:border-slate-800">
+        <a href="/" className="block text-base font-semibold text-slate-950 dark:text-white">
           SF Tennis
         </a>
-        <p className="mt-1 text-sm text-slate-500">Documentation</p>
+        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Documentation</p>
         <AppCta className="mt-4 w-full justify-center px-3 py-2 text-sm" />
       </div>
 
@@ -304,7 +311,7 @@ function Sidebar() {
         <div className="space-y-8">
           {sidebarGroups.map((group) => (
             <div key={group.title}>
-              <p className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
+              <p className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-slate-400 dark:text-slate-500">
                 {group.title}
               </p>
               <div className="space-y-1">
@@ -312,7 +319,7 @@ function Sidebar() {
                   <a
                     key={href}
                     href={href}
-                    className="block rounded-md px-2 py-1.5 text-sm font-medium text-slate-600 transition hover:bg-slate-50 hover:text-slate-950"
+                    className="block rounded-md px-2 py-1.5 text-sm font-medium text-slate-600 transition hover:bg-slate-50 hover:text-slate-950 dark:text-slate-400 dark:hover:bg-slate-900 dark:hover:text-white"
                   >
                     {label}
                   </a>
@@ -323,17 +330,45 @@ function Sidebar() {
         </div>
       </nav>
 
-      <div className="border-t border-slate-200 px-6 py-5">
-        <p className="text-xs font-medium uppercase tracking-[0.14em] text-slate-400">
-          Updated
-        </p>
-        <p className="mt-1 text-sm text-slate-600">{LAST_UPDATED}</p>
+      <div className="border-t border-slate-200 px-6 py-5 dark:border-slate-800">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <p className="text-xs font-medium uppercase tracking-[0.14em] text-slate-400 dark:text-slate-500">
+              Updated
+            </p>
+            <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">{LAST_UPDATED}</p>
+          </div>
+          <DocsThemeToggle />
+        </div>
         <div className="mt-4 flex items-center gap-3">
           <IconOnlyLink href={GITHUB_PROFILE_URL} label="GitHub" icon="github" />
           <IconOnlyLink href={X_URL} label="X" icon="x" />
           <IconOnlyLink href={LINKEDIN_URL} label="LinkedIn" icon="linkedin" />
         </div>
       </div>
+    </aside>
+  );
+}
+
+function OnThisPage() {
+  const links = sidebarGroups.flatMap((group) => group.links);
+
+  return (
+    <aside className="fixed inset-y-0 right-0 hidden w-64 border-l border-slate-200 bg-white px-8 py-14 dark:border-slate-800 dark:bg-slate-950 xl:block">
+      <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400 dark:text-slate-500">
+        On this page
+      </p>
+      <nav aria-label="On this page" className="mt-4 space-y-2">
+        {links.map(([label, href]) => (
+          <a
+            key={href}
+            href={href}
+            className="block text-sm leading-6 text-slate-500 transition hover:text-slate-950 dark:text-slate-400 dark:hover:text-white"
+          >
+            {label}
+          </a>
+        ))}
+      </nav>
     </aside>
   );
 }
@@ -352,13 +387,13 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <section id={id} className="scroll-mt-24 border-t border-slate-200 py-12">
+    <section id={id} className="scroll-mt-24 border-t border-slate-200 py-12 dark:border-slate-800">
       <div className="mb-7">
-        <p className="text-sm font-medium text-emerald-700">{eyebrow}</p>
-        <h2 className="mt-2 text-2xl font-semibold tracking-tight text-slate-950">
+        <p className="text-sm font-medium text-emerald-700 dark:text-emerald-400">{eyebrow}</p>
+        <h2 className="mt-2 text-2xl font-semibold tracking-tight text-slate-950 dark:text-white">
           {title}
         </h2>
-        <p className="mt-3 max-w-2xl text-sm leading-7 text-slate-600">
+        <p className="mt-3 max-w-2xl text-sm leading-7 text-slate-600 dark:text-slate-300">
           {description}
         </p>
       </div>
@@ -370,8 +405,8 @@ function Section({
 function RequestExample({ title, text }: { title: string; text: string }) {
   return (
     <article>
-      <h3 className="text-sm font-semibold text-slate-950">{title}</h3>
-      <pre className="mt-3 max-w-full overflow-hidden whitespace-pre-wrap break-words rounded-lg border border-slate-800 bg-slate-950 p-4 text-sm leading-6 text-slate-100 shadow-sm">
+      <h3 className="text-sm font-semibold text-slate-950 dark:text-white">{title}</h3>
+      <pre className="mt-3 max-w-full overflow-hidden whitespace-pre-wrap break-words rounded-lg border border-slate-800 bg-slate-950 p-4 text-sm leading-6 text-slate-100 shadow-sm dark:border-slate-700 dark:bg-slate-900">
         <code className="break-words">{text}</code>
       </pre>
     </article>
@@ -391,19 +426,19 @@ function EndpointGroup({
 }) {
   return (
     <section id={id} className="scroll-mt-24">
-      <h3 className="text-base font-semibold text-slate-950">{title}</h3>
-      <p className="mt-2 text-sm leading-7 text-slate-600">{description}</p>
-      <div className="mt-4 divide-y divide-slate-200 border-y border-slate-200">
+      <h3 className="text-base font-semibold text-slate-950 dark:text-white">{title}</h3>
+      <p className="mt-2 text-sm leading-7 text-slate-600 dark:text-slate-300">{description}</p>
+      <div className="mt-4 divide-y divide-slate-200 border-y border-slate-200 dark:divide-slate-800 dark:border-slate-800">
         {endpoints.map(([method, path, summary]) => (
           <div key={`${method}-${path}`} className="grid gap-2 py-4 sm:grid-cols-[92px_1fr]">
-            <span className="w-fit rounded-md bg-emerald-50 px-2 py-1 font-mono text-xs font-semibold text-emerald-700">
+            <span className="w-fit rounded-md bg-emerald-50 px-2 py-1 font-mono text-xs font-semibold text-emerald-700 dark:bg-emerald-400/10 dark:text-emerald-300">
               {method}
             </span>
             <div>
-              <code className="text-sm font-semibold text-slate-950">
+              <code className="text-sm font-semibold text-slate-950 dark:text-white">
                 {path}
               </code>
-              <p className="mt-1 text-sm leading-6 text-slate-600">{summary}</p>
+              <p className="mt-1 text-sm leading-6 text-slate-600 dark:text-slate-300">{summary}</p>
             </div>
           </div>
         ))}
@@ -418,20 +453,20 @@ function ResourceList({
   items: Array<{ label: string; href: string; description: string }>;
 }) {
   return (
-    <ul className="divide-y divide-slate-200 border-y border-slate-200">
+    <ul className="divide-y divide-slate-200 border-y border-slate-200 dark:divide-slate-800 dark:border-slate-800">
       {items.map((item) => (
         <li key={item.href} className="py-4">
           <a
             href={item.href}
-            className="group inline-flex items-center gap-2 text-sm font-semibold text-slate-950 transition hover:text-emerald-700"
+            className="group inline-flex items-center gap-2 text-sm font-semibold text-slate-950 transition hover:text-emerald-700 dark:text-white dark:hover:text-emerald-400"
           >
             {item.label}
             <ArrowIcon />
           </a>
-          <p className="mt-1 text-sm leading-6 text-slate-600">
+          <p className="mt-1 text-sm leading-6 text-slate-600 dark:text-slate-300">
             {item.description}
           </p>
-          <p className="mt-1 break-all font-mono text-xs text-slate-500">
+          <p className="mt-1 break-all font-mono text-xs text-slate-500 dark:text-slate-400">
             {item.href}
           </p>
         </li>
@@ -447,7 +482,7 @@ function SocialLinks() {
         <a
           key={link.href}
           href={link.href}
-          className="inline-flex items-center gap-2 text-sm font-semibold text-slate-700 transition hover:text-emerald-700"
+          className="inline-flex items-center gap-2 text-sm font-semibold text-slate-700 transition hover:text-emerald-700 dark:text-slate-300 dark:hover:text-emerald-400"
         >
           <BrandIcon icon={link.icon} className="h-5 w-5" />
           {link.label}
@@ -461,7 +496,7 @@ function TextLink({ href, children }: { href: string; children: React.ReactNode 
   return (
     <a
       href={href}
-      className="inline-flex items-center gap-2 text-emerald-700 transition hover:text-emerald-900"
+      className="inline-flex items-center gap-2 text-emerald-700 transition hover:text-emerald-900 dark:text-emerald-400 dark:hover:text-emerald-300"
     >
       {children}
       <ArrowIcon />
@@ -473,7 +508,7 @@ function AppCta({ className = "" }: { className?: string }) {
   return (
     <a
       href="/"
-      className={`group inline-flex items-center gap-2 rounded-md bg-slate-950 font-semibold text-white transition hover:bg-emerald-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 ${className}`}
+      className={`group inline-flex items-center gap-2 rounded-md bg-slate-950 font-semibold text-white transition hover:bg-emerald-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 dark:bg-white dark:text-slate-950 dark:hover:bg-emerald-200 ${className}`}
     >
       Open app
       <ArrowIcon />
@@ -494,7 +529,7 @@ function IconOnlyLink({
     <a
       href={href}
       aria-label={label}
-      className="text-slate-500 transition hover:text-emerald-700"
+      className="text-slate-500 transition hover:text-emerald-700 dark:text-slate-400 dark:hover:text-emerald-400"
     >
       <BrandIcon icon={icon} className="h-5 w-5" />
     </a>
