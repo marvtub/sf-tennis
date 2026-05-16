@@ -1,74 +1,116 @@
-<!-- README preview (animated, no sound). Click for the project page. -->
-
-[![Demo](.github/demo.gif)](https://marvinaziz.de/projects#sf-tennis-court-finder)
-
 # SF Tennis
 
-Real-time availability map for public tennis and pickleball courts in San Francisco and Mountain View. Live at [tennis.marvinaziz.de](https://tennis.marvinaziz.de).
+Real-time public tennis and pickleball availability for San Francisco and
+Mountain View.
 
-Pulls actual slot-level availability from rec.us (not the stale bulk schedule) and overlays travel times from your location.
+[Live app](https://tennis.marvinaziz.de) |
+[Docs](https://tennis.marvinaziz.de/docs) |
+[OpenAPI](https://tennis.marvinaziz.de/openapi.json)
 
-## Documentation and API
+<!-- README preview (animated, no sound). Click for the project page. -->
 
-SF Tennis publishes regular docs, a Markdown mirror, and an OpenAPI contract so the app can be inspected without reverse-engineering the React map UI.
+[![SF Tennis demo](.github/demo.gif)](https://tennis.marvinaziz.de)
 
-| Surface | URL | Purpose |
+## What It Does
+
+SF Tennis is a map-first browser for public court availability. It pulls actual
+slot-level openings from rec.us, adds weather and travel context, and keeps a
+small public API surface for users, agents, and scripts.
+
+- Shows live tennis and pickleball slots for San Francisco and Mountain View.
+- Fetches per-court rec.us availability instead of relying on stale bulk slots.
+- Adds walking and driving estimates through a server-side Mapbox proxy.
+- Publishes docs, Markdown, OpenAPI, API catalog, and agent skill discovery.
+- Runs on Next.js App Router and Cloudflare Workers via OpenNext.
+
+## Public Surfaces
+
+| Surface | URL | Use |
 | --- | --- | --- |
-| Docs | [`/docs`](https://tennis.marvinaziz.de/docs) | Screenshots, example requests, API examples |
-| Integration guide | [`/llms.txt`](https://tennis.marvinaziz.de/llms.txt) | Compact overview and recommended API workflow |
-| Markdown docs | [`/docs.md`](https://tennis.marvinaziz.de/docs.md) | Markdown mirror for tools that prefer text |
+| App | [`/`](https://tennis.marvinaziz.de) | Map UI for finding courts |
+| Docs | [`/docs`](https://tennis.marvinaziz.de/docs) | Human-readable guide, screenshots, prompts |
+| Markdown docs | [`/docs.md`](https://tennis.marvinaziz.de/docs.md) | Text mirror for agents and tools |
+| Agent guide | [`/llms.txt`](https://tennis.marvinaziz.de/llms.txt) | Compact integration starting point |
 | OpenAPI | [`/openapi.json`](https://tennis.marvinaziz.de/openapi.json) | Machine-readable API contract |
 | API catalog | [`/.well-known/api-catalog`](https://tennis.marvinaziz.de/.well-known/api-catalog) | RFC 9727 linkset discovery |
+| Agent card | [`/.well-known/agent.json`](https://tennis.marvinaziz.de/.well-known/agent.json) | Capability metadata |
+| Agent skills | [`/.well-known/agent-skills/index.json`](https://tennis.marvinaziz.de/.well-known/agent-skills/index.json) | Skill discovery |
 
-The homepage also supports Markdown content negotiation:
+The homepage and docs also support Markdown content negotiation:
 
 ```bash
 curl -H 'Accept: text/markdown' https://tennis.marvinaziz.de/
+curl -H 'Accept: text/markdown' https://tennis.marvinaziz.de/docs
 ```
-
-## Stack
-
-- Next.js 16 (App Router) + React 19, deployed to Cloudflare Workers via [`@opennextjs/cloudflare`](https://github.com/opennextjs/opennextjs-cloudflare)
-- Mapbox GL + `react-map-gl` for the map, Mapbox Directions for travel times
-- Tailwind CSS v4
-
-## Getting started
-
-```bash
-npm install
-cp .env.local.example .env.local   # then fill in the values below
-npm run dev
-```
-
-### Environment variables
-
-| Var | Where | Purpose |
-| --- | --- | --- |
-| `NEXT_PUBLIC_MAPBOX_TOKEN` | browser | Map tiles |
-| `MAPBOX_SECRET_TOKEN` | server | Directions API (walking + driving) |
-
-## Scripts
-
-| Command | |
-| --- | --- |
-| `npm run dev` | Next dev server |
-| `npm run typecheck` | TypeScript check without a production bundle |
-| `npm run build` | Next production build |
-| `npm run cf:build` | Build the Worker bundle (`.open-next/`) |
-| `npm run cf:dev` | Run the Worker locally via Wrangler |
-| `npm run cf:deploy` | Deploy to Cloudflare |
 
 ## Public API
 
+All current API routes are public and read-only.
+
 ```bash
 curl 'https://tennis.marvinaziz.de/api/courts?sport=tennis&city=sf'
+curl 'https://tennis.marvinaziz.de/api/courts?sport=pickleball&city=mountain-view'
 curl 'https://tennis.marvinaziz.de/api/directions?origin=37.7599,-122.4148&locations=dolores:37.7599,-122.4270'
+curl 'https://tennis.marvinaziz.de/api/health'
 ```
 
-Clients should read [`/llms.txt`](https://tennis.marvinaziz.de/llms.txt) and [`/openapi.json`](https://tennis.marvinaziz.de/openapi.json) before calling the API.
+Supported query values:
 
-## Notes
+- `sport`: `tennis` or `pickleball`
+- `city`: `sf` or `mountain-view`
+- `origin`: `lat,lng`
+- `locations`: pipe-delimited `id:lat,lng` entries, capped at 50 locations
 
-- The bulk `rec.us` availability endpoint reports theoretical slots, not real availability. This app fetches per-court availability for every court on every refresh, which is why responses are cached for 2 minutes.
-- `next/image` optimization is off — Cloudflare Workers doesn't support it.
-- Rate limiting is per-isolate in-memory; it's a coarse abuse guard, not a real quota.
+For agent or script integrations, start with
+[`/llms.txt`](https://tennis.marvinaziz.de/llms.txt), then read
+[`/openapi.json`](https://tennis.marvinaziz.de/openapi.json) before calling the
+API.
+
+## Stack
+
+- Next.js 16 App Router and React 19
+- Tailwind CSS v4
+- Mapbox GL via `react-map-gl`
+- Cloudflare Workers deployment through `@opennextjs/cloudflare`
+- rec.us for court metadata and per-court availability
+- Open-Meteo for best-effort slot weather
+
+## Local Development
+
+```bash
+npm install
+cp .env.local.example .env.local
+npm run dev
+```
+
+Required environment variables:
+
+| Variable | Where | Purpose |
+| --- | --- | --- |
+| `NEXT_PUBLIC_MAPBOX_TOKEN` | Browser | Mapbox map tiles |
+| `MAPBOX_SECRET_TOKEN` | Server | Mapbox Directions proxy |
+
+## Scripts
+
+| Command | Description |
+| --- | --- |
+| `npm run dev` | Start the Next.js dev server |
+| `npm run typecheck` | Run TypeScript without building |
+| `npm run build` | Build the production Next.js app |
+| `npm run cf:build` | Build the Cloudflare Worker bundle in `.open-next/` |
+| `npm run cf:dev` | Run the built Worker locally with Wrangler |
+| `npm run cf:deploy` | Deploy to Cloudflare Workers |
+
+## Implementation Notes
+
+- The rec.us bulk availability endpoint is not enough. It reports theoretical
+  schedule slots, so this app fetches every site's per-court availability and
+  caches the assembled response for 2 minutes.
+- `/api/directions` keeps the secret Mapbox token server-side and caches travel
+  estimates for 24 hours.
+- `next/image` optimization is disabled because Cloudflare Workers does not
+  support it in this setup.
+- Rate limiting is per-isolate and in-memory. It is an abuse guard, not a
+  billing or product quota.
+- The app has no login, friends, favourites, private match history, D1 database,
+  OAuth, or protected API surface.
