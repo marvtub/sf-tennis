@@ -6,7 +6,7 @@ const metadata = {
   issuer: SITE_URL,
   authorization_endpoint: `${SITE_URL}/oauth/authorize`,
   token_endpoint: `${SITE_URL}/oauth/token`,
-  jwks_uri: `${SITE_URL}/oauth/jwks.json`,
+  jwks_uri: `${SITE_URL}/.well-known/jwks.json`,
   grant_types_supported: ["client_credentials"],
   response_types_supported: ["code"],
   scopes_supported: ["courts:read", "history:read", "history:write"],
