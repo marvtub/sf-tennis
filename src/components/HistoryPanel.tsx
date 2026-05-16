@@ -1,22 +1,18 @@
 "use client";
 
-import type { PlayHistory, Friend } from "@/types";
+import type { PlayHistory } from "@/types";
 
 interface HistoryPanelProps {
   history: PlayHistory[];
-  friends: Friend[];
   onDelete: (id: string) => void;
   onClose: () => void;
 }
 
 export function HistoryPanel({
   history,
-  friends,
   onDelete,
   onClose,
 }: HistoryPanelProps) {
-  const friendMap = new Map(friends.map((f) => [f.id, f]));
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
       <div className="bg-white rounded-2xl shadow-xl w-[480px] max-h-[80vh] overflow-hidden flex flex-col">
@@ -66,22 +62,6 @@ export function HistoryPanel({
                       🗑
                     </button>
                   </div>
-
-                  {entry.friends.length > 0 && (
-                    <div className="flex gap-1 mt-2">
-                      {entry.friends.map((fid) => {
-                        const friend = friendMap.get(fid);
-                        return friend ? (
-                          <span
-                            key={fid}
-                            className="px-2 py-0.5 text-xs bg-blue-50 text-blue-600 rounded-full"
-                          >
-                            {friend.emoji} {friend.name}
-                          </span>
-                        ) : null;
-                      })}
-                    </div>
-                  )}
 
                   {entry.notes && (
                     <p className="text-sm text-gray-600 mt-2 italic">

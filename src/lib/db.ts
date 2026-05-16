@@ -1,4 +1,4 @@
-import type { Friend, FavouriteCourt, PlayHistory } from "@/types";
+import type { FavouriteCourt, PlayHistory } from "@/types";
 
 /**
  * Database abstraction.
@@ -81,64 +81,6 @@ export async function removeFavourite(locationId: string): Promise<void> {
     .run();
 }
 
-// ── Friends ──
-
-export async function getFriends(): Promise<Friend[]> {
-  const db = getDb();
-  if (!db) return getLocalData<Friend[]>("friends", []);
-
-  const { results } = await db
-    .prepare("SELECT * FROM friends ORDER BY name ASC")
-    .all<{
-      id: string;
-      name: string;
-      address: string;
-      lat: number;
-      lng: number;
-      emoji: string;
-      created_at: string;
-    }>();
-  return results.map((r) => ({
-    id: r.id,
-    name: r.name,
-    address: r.address,
-    lat: r.lat,
-    lng: r.lng,
-    emoji: r.emoji,
-    createdAt: r.created_at,
-  }));
-}
-
-export async function addFriend(
-  friend: Omit<Friend, "createdAt">
-): Promise<void> {
-  const db = getDb();
-  if (!db) {
-    const friends = getLocalData<Friend[]>("friends", []);
-    friends.push({ ...friend, createdAt: new Date().toISOString() });
-    setLocalData("friends", friends);
-    return;
-  }
-
-  await db
-    .prepare(
-      "INSERT INTO friends (id, name, address, lat, lng, emoji) VALUES (?, ?, ?, ?, ?, ?)"
-    )
-    .bind(friend.id, friend.name, friend.address, friend.lat, friend.lng, friend.emoji)
-    .run();
-}
-
-export async function removeFriend(id: string): Promise<void> {
-  const db = getDb();
-  if (!db) {
-    const friends = getLocalData<Friend[]>("friends", []);
-    setLocalData("friends", friends.filter((f) => f.id !== id));
-    return;
-  }
-
-  await db.prepare("DELETE FROM friends WHERE id = ?").bind(id).run();
-}
-
 // ── Play History ──
 
 export async function getPlayHistory(): Promise<PlayHistory[]> {
@@ -160,29 +102,16 @@ export async function getPlayHistory(): Promise<PlayHistory[]> {
       created_at: string;
     }>();
 
-  // Fetch friend associations
-  const entries: PlayHistory[] = [];
-  for (const r of results) {
-    const { results: friendRows } = await db
-      .prepare(
-        "SELECT friend_id FROM play_history_friends WHERE history_id = ?"
-      )
-      .bind(r.id)
-      .all<{ friend_id: string }>();
-
-    entries.push({
-      id: r.id,
-      locationId: r.location_id,
-      locationName: r.location_name,
-      courtNumber: r.court_number,
-      date: r.date,
-      time: r.time,
-      friends: friendRows.map((f) => f.friend_id),
-      notes: r.notes,
-      createdAt: r.created_at,
-    });
-  }
-  return entries;
+  return results.map((r) => ({
+    id: r.id,
+    locationId: r.location_id,
+    locationName: r.location_name,
+    courtNumber: r.court_number,
+    date: r.date,
+    time: r.time,
+    notes: r.notes,
+    createdAt: r.created_at,
+  }));
 }
 
 export async function addPlayHistory(
@@ -211,15 +140,6 @@ export async function addPlayHistory(
     )
     .run();
 
-  // Insert friend associations
-  for (const friendId of entry.friends) {
-    await db
-      .prepare(
-        "INSERT INTO play_history_friends (history_id, friend_id) VALUES (?, ?)"
-      )
-      .bind(entry.id, friendId)
-      .run();
-  }
 }
 
 export async function updatePlayHistory(
@@ -261,22 +181,6 @@ export async function updatePlayHistory(
       .prepare(`UPDATE play_history SET ${sets.join(", ")} WHERE id = ?`)
       .bind(...values)
       .run();
-  }
-
-  // Update friends if provided
-  if (fields.friends) {
-    await db
-      .prepare("DELETE FROM play_history_friends WHERE history_id = ?")
-      .bind(id)
-      .run();
-    for (const friendId of fields.friends) {
-      await db
-        .prepare(
-          "INSERT INTO play_history_friends (history_id, friend_id) VALUES (?, ?)"
-        )
-        .bind(id, friendId)
-        .run();
-    }
   }
 
   return true;

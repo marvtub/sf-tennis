@@ -24,7 +24,6 @@ export function useHistory(authenticated: boolean) {
       courtNumber?: string;
       date: string;
       time?: string;
-      friends?: string[];
       notes?: string;
     }): Promise<boolean> => {
       try {
@@ -43,7 +42,6 @@ export function useHistory(authenticated: boolean) {
             courtNumber: entry.courtNumber || null,
             date: entry.date,
             time: entry.time || null,
-            friends: entry.friends || [],
             notes: entry.notes || "",
             createdAt: new Date().toISOString(),
           },

@@ -7,7 +7,6 @@ import { useTravelTimes } from "@/hooks/useTravelTimes";
 import { useUserLocation } from "@/hooks/useUserLocation";
 import { useAuth } from "@/hooks/useAuth";
 import { useFavourites } from "@/hooks/useFavourites";
-import { useFriends } from "@/hooks/useFriends";
 import { useHistory } from "@/hooks/useHistory";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { TopBar } from "@/components/TopBar";
@@ -19,10 +18,6 @@ import { applyFilter, getAvailableDates } from "@/lib/filter";
 // Lazy-load dialogs — only fetched when user opens them
 const LoginDialog = dynamic(
   () => import("@/components/LoginDialog").then((m) => m.LoginDialog),
-  { ssr: false }
-);
-const AddFriendDialog = dynamic(
-  () => import("@/components/AddFriendDialog").then((m) => m.AddFriendDialog),
   { ssr: false }
 );
 const AddHistoryDialog = dynamic(
@@ -79,7 +74,6 @@ export default function Home() {
   const travelTimes = useTravelTimes(rawCourts, userLocation);
   const auth = useAuth();
   const { favourites, toggleFavourite } = useFavourites();
-  const { friends, addFriend, removeFriend } = useFriends(auth.authenticated);
   const { history, addEntry, deleteEntry } = useHistory(auth.authenticated);
 
   // UI state
@@ -93,7 +87,6 @@ export default function Home() {
   const [viewMode, setViewMode] = useState<"map" | "list">("map");
   const [showSearch, setShowSearch] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
-  const [showAddFriend, setShowAddFriend] = useState(false);
   const [showAddHistory, setShowAddHistory] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
 
@@ -141,8 +134,8 @@ export default function Home() {
         <h1>SF Tennis live public court availability</h1>
         <p>
           Find real-time tennis and pickleball court availability in San
-          Francisco and Mountain View. Agents can use /llms.txt, /docs.md, and
-          /openapi.json for machine-readable instructions and API access.
+          Francisco and Mountain View. Developers can use /llms.txt, /docs.md,
+          and /openapi.json for machine-readable instructions and API access.
         </p>
       </div>
       <TopBar
@@ -150,7 +143,6 @@ export default function Home() {
         hasData={rawCourts.length > 0}
         fetchedAt={fetchedAt}
         authenticated={auth.authenticated}
-        friends={friends}
         viewMode={viewMode}
         sport={sport}
         city={city}
@@ -161,11 +153,9 @@ export default function Home() {
         onToggleView={() => setViewMode((m) => (m === "map" ? "list" : "map"))}
         onShowSearch={() => setShowSearch(true)}
         onShowLogin={() => setShowLogin(true)}
-        onShowAddFriend={() => setShowAddFriend(true)}
         onShowAddHistory={() => setShowAddHistory(true)}
         onShowHistory={() => setShowHistory(true)}
         onLogout={auth.logout}
-        onRemoveFriend={removeFriend}
       />
 
       {/* Loading state */}
@@ -180,7 +170,6 @@ export default function Home() {
           {viewMode === "map" ? (
             <MapView
               courts={courts}
-              friends={friends}
               favourites={favourites}
               selectedId={selectedId}
               onSelectCourt={setSelectedId}
@@ -212,7 +201,6 @@ export default function Home() {
           onToggleFavourite={() => toggleFavourite(selectedCourt.id)}
           onClose={() => setSelectedId(null)}
           matchHistory={history}
-          friends={friends}
           originLat={userLocation.lat}
           originLng={userLocation.lng}
         />
@@ -229,17 +217,9 @@ export default function Home() {
           onClose={() => setShowLogin(false)}
         />
       )}
-      {showAddFriend && (
-        <AddFriendDialog
-          onAdd={addFriend}
-          onClose={() => setShowAddFriend(false)}
-          mapboxToken={mapboxToken}
-        />
-      )}
       {showAddHistory && (
         <AddHistoryDialog
           locations={rawCourts}
-          friends={friends}
           onAdd={addEntry}
           onClose={() => setShowAddHistory(false)}
         />
@@ -247,7 +227,6 @@ export default function Home() {
       {showHistory && (
         <HistoryPanel
           history={history}
-          friends={friends}
           onDelete={deleteEntry}
           onClose={() => setShowHistory(false)}
         />

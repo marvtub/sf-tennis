@@ -15,14 +15,14 @@ There is no test suite, no linter config, and no formatter — don't invent comm
 
 ## Architecture
 
-Next.js 16 (App Router) frontend deployed to **Cloudflare Workers** via OpenNext. The app is a map-based browser for real-time tennis/pickleball court availability, with a small authenticated layer for personal data (favourites, friends, match history).
+Next.js 16 (App Router) frontend deployed to **Cloudflare Workers** via OpenNext. The app is a map-based browser for real-time tennis/pickleball court availability, with a small authenticated layer for personal data (favourites, match history).
 
-### Agent-readiness surface
+### Documentation and discovery surface
 
-Public agent docs and discovery live in static App Router routes:
+Public docs and discovery live in static App Router routes:
 
-- `/docs` human-friendly documentation with screenshots and prompt examples.
-- `/llms.txt` and `/llm.txt` token-efficient agent guide.
+- `/docs` documentation with screenshots and example requests.
+- `/llms.txt` and `/llm.txt` compact integration guide.
 - `/docs.md` markdown mirror of the docs page.
 - `/openapi.json` OpenAPI 3.1 contract for public availability and external history APIs.
 - `/.well-known/api-catalog`, `/.well-known/agent.json`, `/.well-known/agent-skills/index.json`, `/.well-known/oauth-authorization-server`, and `/.well-known/oauth-protected-resource` for discovery.
@@ -47,20 +47,20 @@ Cities are configured in `CITIES` (`src/lib/constants.ts`) and piped through as 
 
 In Workers, `getDb()` pulls the D1 binding via `getCloudflareContext().env.DB` (the `require` trick in `getDb` is there on purpose — it avoids the bundler statically resolving `@opennextjs/cloudflare` during Next's build). In local `next dev` there is no binding, so every db function falls through to a JSON read/write against `.data.json` at the repo root. Both paths must stay in sync when you add a new query.
 
-Schema (`schema.sql`): `favourites`, `friends`, `play_history`, and a many-to-many `play_history_friends`.
+Schema (`schema.sql`): `favourites` and `play_history`.
 
 ### Auth & rate limiting
 
 Two separate auth mechanisms:
 
 - **Browser PIN auth** (`src/lib/auth.ts`): single `AUTH_PIN` env var, session is a base64-encoded `{ts, pin}` blob stored in the `sf-tennis-session` cookie, verified with a constant-time compare. Guards personal-data routes via `requireAuth()` (`src/lib/auth-guard.ts`).
-- **API-key auth** (`src/app/api/history/external/route.ts`): `Authorization: Bearer <API_KEY>` header, timing-safe compare, separate rate limit. Designed for agents/automations to read/write `play_history`.
+- **API-key auth** (`src/app/api/history/external/route.ts`): `Authorization: Bearer <API_KEY>` header, timing-safe compare, separate rate limit. Designed for authorized clients to read/write `play_history`.
 
 Rate limiting (`src/middleware.ts`) is in-memory per-IP — **resets on every deploy** and is per-isolate, not global. It's a coarse guard, not a real quota. The middleware also 403s common SEO bots on `/` to avoid burning Mapbox loads.
 
 ### Frontend composition (`src/app/page.tsx`)
 
-The home page is the single stateful root. It composes feature hooks (`useCourts`, `useTravelTimes`, `useUserLocation`, `useAuth`, `useFavourites`, `useFriends`, `useHistory`) and passes slices down to presentational components. Dialogs and `HistoryPanel` are `next/dynamic`-imported to keep initial JS small. `MapView` uses `react-map-gl` + Mapbox GL; `/api/directions` proxies Mapbox Directions with a 24h cache so the client never sees the secret token.
+The home page is the single stateful root. It composes feature hooks (`useCourts`, `useTravelTimes`, `useUserLocation`, `useAuth`, `useFavourites`, `useHistory`) and passes slices down to presentational components. Dialogs and `HistoryPanel` are `next/dynamic`-imported to keep initial JS small. `MapView` uses `react-map-gl` + Mapbox GL; `/api/directions` proxies Mapbox Directions with a 24h cache so the client never sees the secret token.
 
 ### Deployment details
 

@@ -52,9 +52,9 @@ export function WebMcpBridge() {
         },
       },
       {
-        name: "sf_tennis_get_agent_docs",
+        name: "sf_tennis_get_docs",
         description:
-          "Fetch the SF Tennis llms.txt guide for safe agent usage instructions.",
+          "Fetch the SF Tennis llms.txt guide for API usage instructions.",
         inputSchema: { type: "object", properties: {} },
         execute: async () => {
           const res = await fetch("/llms.txt");
@@ -73,7 +73,7 @@ export function WebMcpBridge() {
       modelContext.provideContext({
         name: "SF Tennis",
         description:
-          "Live public tennis and pickleball availability with safe agent docs.",
+          "Live public tennis and pickleball availability with API docs.",
         tools,
       });
       return;

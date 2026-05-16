@@ -10,12 +10,11 @@ export const metadata: Metadata = {
     template: "%s | SF Tennis",
   },
   description:
-    "Find live public tennis and pickleball court availability in San Francisco and Mountain View, with travel times and agent-readable API docs.",
+    "Find live public tennis and pickleball court availability in San Francisco and Mountain View, with travel times and API docs.",
   keywords: [
     "San Francisco tennis courts",
     "pickleball courts",
     "court availability",
-    "AI agent ready app",
     "SF Tennis API",
   ],
   authors: [{ name: "Marvin Aziz", url: "https://marvinaziz.de" }],
@@ -34,7 +33,7 @@ export const metadata: Metadata = {
     siteName: "SF Tennis",
     title: "SF Tennis - Live Public Court Availability",
     description:
-      "Real-time tennis and pickleball court availability with travel times and agent-readable API docs.",
+      "Real-time tennis and pickleball court availability with travel times and API docs.",
     images: [
       {
         url: "/screenshots/court-details.webp",
@@ -48,7 +47,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "SF Tennis - Live Public Court Availability",
     description:
-      "Real-time tennis and pickleball court availability with agent-readable API docs.",
+      "Real-time tennis and pickleball court availability with API docs.",
     images: ["/screenshots/court-details.webp"],
   },
   robots: {

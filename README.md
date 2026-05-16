@@ -1,28 +1,26 @@
-<!-- README preview (animated, no sound). Click for the full video with audio. -->
+<!-- README preview (animated, no sound). Click for the project page. -->
 
-[![Demo](.github/demo.gif)](https://github.com/marvtub/sf-tennis/raw/refs/heads/master/.github/demo.mp4)
+[![Demo](.github/demo.gif)](https://marvinaziz.de/projects#sf-tennis-court-finder)
 
 # SF Tennis
 
 Real-time availability map for public tennis and pickleball courts in San Francisco and Mountain View. Live at [tennis.marvinaziz.de](https://tennis.marvinaziz.de).
 
-Pulls actual slot-level availability from rec.us (not the stale bulk schedule), overlays travel times from your location, and keeps a small personal layer for favourites, friends, and match history behind a PIN.
+Pulls actual slot-level availability from rec.us (not the stale bulk schedule), overlays travel times from your location, and keeps a small personal layer for favourites and match history behind a PIN.
 
-## Agent-ready surface
+## Documentation and API
 
-SF Tennis is designed to be usable by humans, search crawlers, and coding agents without asking an agent to reverse-engineer a React map UI.
+SF Tennis publishes regular docs, a Markdown mirror, and an OpenAPI contract so the app can be inspected without reverse-engineering the React map UI.
 
 | Surface | URL | Purpose |
 | --- | --- | --- |
-| Human + agent docs | [`/docs`](https://tennis.marvinaziz.de/docs) | Screenshots, prompts, safety rules, API examples |
-| LLM guide | [`/llms.txt`](https://tennis.marvinaziz.de/llms.txt) | Token-efficient overview and recommended agent workflow |
+| Docs | [`/docs`](https://tennis.marvinaziz.de/docs) | Screenshots, example requests, API examples |
+| Integration guide | [`/llms.txt`](https://tennis.marvinaziz.de/llms.txt) | Compact overview and recommended API workflow |
 | Markdown docs | [`/docs.md`](https://tennis.marvinaziz.de/docs.md) | Markdown mirror for tools that prefer text |
 | OpenAPI | [`/openapi.json`](https://tennis.marvinaziz.de/openapi.json) | Machine-readable API contract |
 | API catalog | [`/.well-known/api-catalog`](https://tennis.marvinaziz.de/.well-known/api-catalog) | RFC 9727 linkset discovery |
 | OAuth metadata | [`/.well-known/oauth-authorization-server`](https://tennis.marvinaziz.de/.well-known/oauth-authorization-server) | OAuth discovery for the history API |
 | Protected resource | [`/.well-known/oauth-protected-resource`](https://tennis.marvinaziz.de/.well-known/oauth-protected-resource) | OAuth protected resource metadata |
-| Agent Skills | [`/.well-known/agent-skills/index.json`](https://tennis.marvinaziz.de/.well-known/agent-skills/index.json) | Skill discovery for agents |
-| Agent card | [`/.well-known/agent.json`](https://tennis.marvinaziz.de/.well-known/agent.json) | Capability card for agent ecosystems |
 
 The homepage also supports Markdown content negotiation:
 
@@ -76,15 +74,15 @@ npx wrangler d1 execute sf-tennis-db --remote --file=schema.sql   # prod
 
 ## External API
 
-Agents and automations can read/write match history with a bearer token:
+Authorized clients can read/write match history with a bearer token:
 
 ```bash
 curl -H "Authorization: Bearer $API_KEY" https://tennis.marvinaziz.de/api/history/external
 ```
 
-`GET` returns `{ history, friends, courtsUrl }`. `POST`/`PUT`/`DELETE` accept JSON bodies — see `src/app/api/history/external/route.ts` for the exact shape.
+`GET` returns `{ history, courtsUrl }`. `POST`/`PUT`/`DELETE` accept JSON bodies — see `src/app/api/history/external/route.ts` for the exact shape.
 
-Agents should read [`/llms.txt`](https://tennis.marvinaziz.de/llms.txt) and [`/openapi.json`](https://tennis.marvinaziz.de/openapi.json) before calling this endpoint, and should never print bearer tokens, friend addresses, or private history in public output.
+Clients should read [`/llms.txt`](https://tennis.marvinaziz.de/llms.txt) and [`/openapi.json`](https://tennis.marvinaziz.de/openapi.json) before calling this endpoint, and should never print bearer tokens or private history in public output.
 
 For clients that require OAuth-style discovery, `/.well-known/oauth-authorization-server` and `/.well-known/oauth-protected-resource` describe a `client_credentials` flow where the user-provided `API_KEY` is used as `client_secret` and exchanged at `/oauth/token` for the same bearer token shape.
 

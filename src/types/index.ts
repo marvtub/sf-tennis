@@ -121,16 +121,6 @@ export interface FavouriteCourt {
   createdAt: string;
 }
 
-export interface Friend {
-  id: string;
-  name: string;
-  address: string;
-  lat: number;
-  lng: number;
-  emoji: string; // e.g. "👩" for Gabriella
-  createdAt: string;
-}
-
 export interface PlayHistory {
   id: string;
   locationId: string;
@@ -138,7 +128,6 @@ export interface PlayHistory {
   courtNumber: string | null;
   date: string; // "2026-03-29"
   time: string | null; // "18:00"
-  friends: string[]; // friend IDs
   notes: string;
   createdAt: string;
 }

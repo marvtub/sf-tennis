@@ -80,15 +80,3 @@ export function HomePin() {
     </div>
   );
 }
-
-export function FriendPin({ emoji, name }: { emoji: string; name: string }) {
-  return (
-    <div
-      className="flex items-center justify-center w-10 h-10 rounded-full bg-pink-500 border-2 border-pink-700 text-white text-lg shadow-lg"
-      aria-label={`${name}'s location`}
-      title={name}
-    >
-      {emoji}
-    </div>
-  );
-}

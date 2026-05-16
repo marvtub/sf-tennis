@@ -3,16 +3,15 @@
 import { useState, useCallback, memo } from "react";
 import Map, { Marker, NavigationControl } from "react-map-gl/mapbox";
 import "mapbox-gl/dist/mapbox-gl.css";
-import type { CourtLocation, TravelTime, Friend } from "@/types";
+import type { CourtLocation, TravelTime } from "@/types";
 import type { UserLocation } from "@/hooks/useUserLocation";
 import type { CityId } from "@/lib/constants";
 import { CITIES, DEFAULT_CITY } from "@/lib/constants";
-import { CourtPin, HomePin, FriendPin } from "./CourtPin";
+import { CourtPin, HomePin } from "./CourtPin";
 import { TravelBadgeMini } from "./TravelBadge";
 
 interface MapViewProps {
   courts: CourtLocation[];
-  friends: Friend[];
   favourites: Set<string>;
   selectedId: string | null;
   onSelectCourt: (id: string | null) => void;
@@ -24,7 +23,6 @@ interface MapViewProps {
 
 export function MapView({
   courts,
-  friends,
   favourites,
   selectedId,
   onSelectCourt,
@@ -92,23 +90,6 @@ export function MapView({
       <Marker latitude={userLocation.lat} longitude={userLocation.lng} anchor="center">
         <HomePin />
       </Marker>
-
-      {/* Friend markers */}
-      {friends.map((friend) => (
-        <Marker
-          key={`friend-${friend.id}`}
-          latitude={friend.lat}
-          longitude={friend.lng}
-          anchor="center"
-        >
-          <div className="relative">
-            <FriendPin emoji={friend.emoji} name={friend.name} />
-            <div className="absolute -bottom-5 left-1/2 -translate-x-1/2 whitespace-nowrap px-1.5 py-0.5 bg-white/90 rounded text-[10px] font-medium text-pink-700 shadow-sm border">
-              {friend.name}
-            </div>
-          </div>
-        </Marker>
-      ))}
 
       {/* Court markers — each memoized, only re-render on its own prop changes */}
       {courts.map((loc) => (

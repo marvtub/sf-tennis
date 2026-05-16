@@ -1,6 +1,6 @@
 "use client";
 
-import type { CourtLocation, TravelTime, PlayHistory, Friend } from "@/types";
+import type { CourtLocation, TravelTime, PlayHistory } from "@/types";
 import { SlotGrid } from "./SlotGrid";
 import { TravelBadge } from "./TravelBadge";
 
@@ -12,7 +12,6 @@ interface CourtPanelProps {
   onToggleFavourite: () => void;
   onClose: () => void;
   matchHistory: PlayHistory[];
-  friends: Friend[];
   originLat: number;
   originLng: number;
 }
@@ -25,11 +24,9 @@ export function CourtPanel({
   onToggleFavourite,
   onClose,
   matchHistory,
-  friends,
   originLat,
   originLng,
 }: CourtPanelProps) {
-  const friendMap = new Map(friends.map((f) => [f.id, f]));
   const locationHistory = matchHistory.filter(
     (h) => h.locationId === location.id
   );
@@ -141,21 +138,6 @@ export function CourtPanel({
                 </div>
                 {entry.courtNumber && (
                   <div className="text-xs text-gray-500">{entry.courtNumber}</div>
-                )}
-                {entry.friends.length > 0 && (
-                  <div className="flex gap-1 mt-1">
-                    {entry.friends.map((fid) => {
-                      const friend = friendMap.get(fid);
-                      return friend ? (
-                        <span
-                          key={fid}
-                          className="text-xs text-blue-600"
-                        >
-                          {friend.emoji} {friend.name}
-                        </span>
-                      ) : null;
-                    })}
-                  </div>
                 )}
                 {entry.notes && (
                   <p className="text-xs text-gray-500 mt-1 italic">

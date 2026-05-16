@@ -1,5 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { addPlayHistory, getPlayHistory, getFriends, deletePlayHistory, updatePlayHistory } from "@/lib/db";
+import {
+  addPlayHistory,
+  getPlayHistory,
+  deletePlayHistory,
+  updatePlayHistory,
+} from "@/lib/db";
 
 // ── Timing-safe API key verification ──
 
@@ -42,53 +47,49 @@ function verifyApiKey(request: NextRequest): NextResponse | null {
 // ── Input sanitization ──
 
 const MAX_STRING_LENGTH = 500;
-const MAX_FRIENDS = 20;
 
 function sanitizeString(val: unknown, maxLen = MAX_STRING_LENGTH): string | undefined {
   if (typeof val !== "string") return undefined;
   return val.slice(0, maxLen).trim();
 }
 
-function sanitizeFriends(val: unknown): string[] {
-  if (!Array.isArray(val)) return [];
-  return val
-    .filter((v): v is string => typeof v === "string" && v.length > 0)
-    .slice(0, MAX_FRIENDS)
-    .map((v) => v.slice(0, 100));
-}
-
 /**
- * GET /api/history/external — list match history, friends, and court locations
+ * GET /api/history/external — list match history and court locations
  *
  * Headers:
  *   Authorization: Bearer <API_KEY>
  *
- * Returns: { history, friends, courtsUrl }
+ * Returns: { history, courtsUrl }
  */
 export async function GET(request: NextRequest) {
   const denied = verifyApiKey(request);
   if (denied) return denied;
 
-  const [history, friends] = await Promise.all([
-    getPlayHistory(),
-    getFriends(),
-  ]);
+  const history = await getPlayHistory();
 
   return NextResponse.json({
-    history,
-    friends: friends.map((f) => ({ id: f.id, name: f.name, emoji: f.emoji })),
+    history: history.map((entry) => ({
+      id: entry.id,
+      locationId: entry.locationId,
+      locationName: entry.locationName,
+      courtNumber: entry.courtNumber,
+      date: entry.date,
+      time: entry.time,
+      notes: entry.notes,
+      createdAt: entry.createdAt,
+    })),
     courtsUrl: "/api/courts (public, no auth needed)",
   });
 }
 
 /**
- * POST /api/history/external — add a match via API key (for agents/automations)
+ * POST /api/history/external — add a match via API key (for automation clients)
  *
  * Headers:
  *   Authorization: Bearer <API_KEY>
  *
  * Body (JSON):
- *   { locationId, locationName, courtNumber?, date, time?, friends?, notes? }
+ *   { locationId, locationName, courtNumber?, date, time?, notes? }
  */
 export async function POST(request: NextRequest) {
   const denied = verifyApiKey(request);
@@ -126,7 +127,6 @@ export async function POST(request: NextRequest) {
 
   const courtNumber = sanitizeString(body.courtNumber, 20);
   const time = sanitizeString(body.time, 5); // "18:00"
-  const friends = sanitizeFriends(body.friends);
   const notes = sanitizeString(body.notes, 1000) || "";
 
   const id = crypto.randomUUID();
@@ -137,7 +137,6 @@ export async function POST(request: NextRequest) {
     courtNumber: courtNumber || null,
     date,
     time: time || null,
-    friends,
     notes,
   });
 
@@ -145,14 +144,14 @@ export async function POST(request: NextRequest) {
 }
 
 /**
- * PUT /api/history/external — update a match (for agents/automations)
+ * PUT /api/history/external — update a match (for automation clients)
  *
  * Headers:
  *   Authorization: Bearer <API_KEY>
  *
  * Body (JSON):
  *   { id, ...fieldsToUpdate }
- *   Updatable: locationId, locationName, courtNumber, date, time, friends, notes
+ *   Updatable: locationId, locationName, courtNumber, date, time, notes
  */
 export async function PUT(request: NextRequest) {
   const denied = verifyApiKey(request);
@@ -189,7 +188,6 @@ export async function PUT(request: NextRequest) {
     fields.date = d;
   }
   if (body.time !== undefined) fields.time = sanitizeString(body.time, 5);
-  if (body.friends !== undefined) fields.friends = sanitizeFriends(body.friends);
   if (body.notes !== undefined) fields.notes = sanitizeString(body.notes, 1000);
 
   const updated = await updatePlayHistory(id, fields);
@@ -204,7 +202,7 @@ export async function PUT(request: NextRequest) {
 }
 
 /**
- * DELETE /api/history/external — delete a match (for agents/automations)
+ * DELETE /api/history/external — delete a match (for automation clients)
  *
  * Headers:
  *   Authorization: Bearer <API_KEY>

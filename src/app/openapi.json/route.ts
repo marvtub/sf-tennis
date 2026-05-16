@@ -116,7 +116,7 @@ const openapi = {
         security: [{ bearerApiKey: [] }, { oauthClientCredentials: ["history:read"] }],
         responses: {
           "200": {
-            description: "History and friend display names.",
+            description: "Match history entries and a public courts API hint.",
             content: {
               "application/json": {
                 schema: { $ref: "#/components/schemas/HistoryListResponse" },
@@ -306,7 +306,6 @@ const openapi = {
         type: "object",
         properties: {
           history: { type: "array", items: { type: "object", additionalProperties: true } },
-          friends: { type: "array", items: { type: "object", additionalProperties: true } },
           courtsUrl: { type: "string" },
         },
       },
@@ -319,11 +318,6 @@ const openapi = {
           courtNumber: { type: "string", maxLength: 20 },
           date: { type: "string", pattern: "^\\d{4}-\\d{2}-\\d{2}$" },
           time: { type: "string", maxLength: 5 },
-          friends: {
-            type: "array",
-            maxItems: 20,
-            items: { type: "string", maxLength: 100 },
-          },
           notes: { type: "string", maxLength: 1000 },
         },
       },

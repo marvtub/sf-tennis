@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { TimeSince } from "./TimeSince";
-import type { Friend } from "@/types";
 import type { Sport, CityId } from "@/lib/constants";
 import { CITIES } from "@/lib/constants";
 import type { UserLocationStatus } from "@/hooks/useUserLocation";
@@ -12,7 +11,6 @@ interface TopBarProps {
   hasData: boolean;
   fetchedAt: string | null;
   authenticated: boolean;
-  friends: Friend[];
   viewMode: "map" | "list";
   sport: Sport;
   city: CityId;
@@ -23,11 +21,9 @@ interface TopBarProps {
   onToggleView: () => void;
   onShowSearch: () => void;
   onShowLogin: () => void;
-  onShowAddFriend: () => void;
   onShowAddHistory: () => void;
   onShowHistory: () => void;
   onLogout: () => void;
-  onRemoveFriend: (id: string) => void;
 }
 
 export function TopBar({
@@ -35,7 +31,6 @@ export function TopBar({
   hasData,
   fetchedAt,
   authenticated,
-  friends,
   viewMode,
   sport,
   city,
@@ -46,11 +41,9 @@ export function TopBar({
   onToggleView,
   onShowSearch,
   onShowLogin,
-  onShowAddFriend,
   onShowAddHistory,
   onShowHistory,
   onLogout,
-  onRemoveFriend,
 }: TopBarProps) {
   const [showMenu, setShowMenu] = useState(false);
   const cityConfig = CITIES[city];
@@ -173,14 +166,6 @@ export function TopBar({
                     <>
                       <MenuButton
                         onClick={() => {
-                          onShowAddFriend();
-                          setShowMenu(false);
-                        }}
-                      >
-                        👤 Add Friend
-                      </MenuButton>
-                      <MenuButton
-                        onClick={() => {
                           onShowAddHistory();
                           setShowMenu(false);
                         }}
@@ -195,30 +180,6 @@ export function TopBar({
                       >
                         📋 Match History
                       </MenuButton>
-                      {friends.length > 0 && (
-                        <>
-                          <div className="border-t my-1" />
-                          <div className="px-3 py-1 text-xs text-gray-400 font-medium">
-                            Friends
-                          </div>
-                          {friends.map((f) => (
-                            <div
-                              key={f.id}
-                              className="flex items-center justify-between px-3 py-1.5 text-sm"
-                            >
-                              <span>
-                                {f.emoji} {f.name}
-                              </span>
-                              <button
-                                onClick={() => onRemoveFriend(f.id)}
-                                className="text-gray-300 hover:text-red-500 text-xs"
-                              >
-                                ✕
-                              </button>
-                            </div>
-                          ))}
-                        </>
-                      )}
                       <div className="border-t my-1" />
                       <MenuButton
                         onClick={() => {

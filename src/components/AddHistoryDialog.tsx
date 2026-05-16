@@ -1,18 +1,16 @@
 "use client";
 
 import { useState } from "react";
-import type { CourtLocation, Friend } from "@/types";
+import type { CourtLocation } from "@/types";
 
 interface AddHistoryDialogProps {
   locations: CourtLocation[];
-  friends: Friend[];
   onAdd: (entry: {
     locationId: string;
     locationName: string;
     courtNumber?: string;
     date: string;
     time?: string;
-    friends?: string[];
     notes?: string;
   }) => Promise<boolean>;
   onClose: () => void;
@@ -20,7 +18,6 @@ interface AddHistoryDialogProps {
 
 export function AddHistoryDialog({
   locations,
-  friends,
   onAdd,
   onClose,
 }: AddHistoryDialogProps) {
@@ -28,9 +25,6 @@ export function AddHistoryDialog({
   const [courtNumber, setCourtNumber] = useState("");
   const [date, setDate] = useState(getTodaySF());
   const [time, setTime] = useState("");
-  const [selectedFriends, setSelectedFriends] = useState<Set<string>>(
-    new Set()
-  );
   const [notes, setNotes] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -48,21 +42,11 @@ export function AddHistoryDialog({
       courtNumber: courtNumber || undefined,
       date,
       time: time || undefined,
-      friends: Array.from(selectedFriends),
       notes: notes.trim() || undefined,
     });
 
     if (ok) onClose();
     setLoading(false);
-  };
-
-  const toggleFriend = (id: string) => {
-    setSelectedFriends((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
   };
 
   return (
@@ -147,31 +131,6 @@ export function AddHistoryDialog({
               />
             </div>
           </div>
-
-          {/* Friends */}
-          {friends.length > 0 && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Played with
-              </label>
-              <div className="flex flex-wrap gap-1">
-                {friends.map((f) => (
-                  <button
-                    key={f.id}
-                    type="button"
-                    onClick={() => toggleFriend(f.id)}
-                    className={`px-2.5 py-1 rounded-full text-xs font-medium transition-all ${
-                      selectedFriends.has(f.id)
-                        ? "bg-blue-100 text-blue-700 ring-1 ring-blue-300"
-                        : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                    }`}
-                  >
-                    {f.emoji} {f.name}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
 
           {/* Notes */}
           <div>

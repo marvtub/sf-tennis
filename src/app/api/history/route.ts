@@ -9,21 +9,11 @@ const MAX_NAME = 200;
 const MAX_COURT = 20;
 const MAX_TIME = 5;
 const MAX_NOTES = 1000;
-const MAX_FRIENDS = 20;
-const MAX_FRIEND_ID = 100;
 
 function asString(val: unknown, maxLen: number): string | undefined {
   if (typeof val !== "string") return undefined;
   const trimmed = val.slice(0, maxLen).trim();
   return trimmed.length > 0 ? trimmed : undefined;
-}
-
-function asFriends(val: unknown): string[] {
-  if (!Array.isArray(val)) return [];
-  return val
-    .filter((v): v is string => typeof v === "string" && v.length > 0)
-    .slice(0, MAX_FRIENDS)
-    .map((v) => v.slice(0, MAX_FRIEND_ID));
 }
 
 /** GET /api/history — list play history (auth required) */
@@ -66,7 +56,6 @@ export async function POST(request: NextRequest) {
 
   const courtNumber = asString(body.courtNumber, MAX_COURT);
   const time = asString(body.time, MAX_TIME);
-  const friends = asFriends(body.friends);
   const notes = asString(body.notes, MAX_NOTES) ?? "";
 
   const id = crypto.randomUUID();
@@ -77,7 +66,6 @@ export async function POST(request: NextRequest) {
     courtNumber: courtNumber ?? null,
     date,
     time: time ?? null,
-    friends,
     notes,
   });
 
