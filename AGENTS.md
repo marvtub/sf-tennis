@@ -1,7 +1,7 @@
-# CLAUDE.md
+# AGENTS.md
 
-This file gives Claude Code repo-specific context. Keep it in sync with
-`AGENTS.md`, which is the general guide for coding agents working here.
+This guide is for coding agents working in this repository. Keep it aligned
+with `CLAUDE.md`.
 
 ## Current Product Boundary
 
