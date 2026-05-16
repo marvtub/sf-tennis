@@ -39,7 +39,11 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const locations = locationsParam.split("|").map((entry) => {
+  // Cap fan-out — each location triggers 2 Mapbox calls, so without a cap a
+  // single request can amplify into a large outbound burst.
+  const MAX_LOCATIONS = 50;
+  const rawEntries = locationsParam.split("|").slice(0, MAX_LOCATIONS);
+  const locations = rawEntries.map((entry) => {
     const [id, coords] = entry.split(":");
     if (!coords) return null;
     const [lat, lng] = coords.split(",").map(Number);

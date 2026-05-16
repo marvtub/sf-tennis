@@ -3,15 +3,20 @@
 import { useState, useEffect, useCallback } from "react";
 import type { Friend } from "@/types";
 
-export function useFriends() {
+export function useFriends(authenticated: boolean) {
   const [friends, setFriends] = useState<Friend[]>([]);
 
   useEffect(() => {
+    // GET is auth-gated; unauthenticated clients get 401 + no friends payload.
+    if (!authenticated) {
+      setFriends([]);
+      return;
+    }
     fetch("/api/friends")
-      .then((r) => r.json())
-      .then((d) => setFriends(d.friends))
+      .then((r) => (r.ok ? r.json() : { friends: [] }))
+      .then((d) => setFriends(Array.isArray(d.friends) ? d.friends : []))
       .catch(() => {});
-  }, []);
+  }, [authenticated]);
 
   const addFriend = useCallback(
     async (friend: {

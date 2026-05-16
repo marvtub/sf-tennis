@@ -71,12 +71,11 @@ export async function GET(request: NextRequest) {
       }
     );
   } catch (error) {
+    // Log full error server-side; return a generic message to clients to
+    // avoid leaking upstream details (URLs, headers, stack hints).
     console.error("Failed to fetch courts:", error);
     return NextResponse.json(
-      {
-        error: "Failed to fetch court availability",
-        message: error instanceof Error ? error.message : "Unknown error",
-      },
+      { error: "Failed to fetch court availability" },
       { status: 502 }
     );
   }
