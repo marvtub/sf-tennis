@@ -62,4 +62,5 @@ Required in `.env.local` for dev and as Worker secrets in prod:
 - `NEXT_PUBLIC_MAPBOX_TOKEN` — public Mapbox token for map tiles (shipped to browser).
 - `MAPBOX_SECRET_TOKEN` — server-side Mapbox token for `/api/directions`.
 - `AUTH_PIN` — PIN for browser login.
+- `SESSION_SECRET` — HMAC secret used to sign session cookies. Recommended in prod. If unset, the signing key is derived from `AUTH_PIN` as a fallback (still better than the previous design that embedded the PIN in the cookie, but a dedicated secret means rotating the PIN doesn't invalidate sessions and vice-versa).
 - `API_KEY` — bearer token for `/api/history/external`.
