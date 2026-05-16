@@ -11,10 +11,6 @@ import { useFriends } from "@/hooks/useFriends";
 import { useHistory } from "@/hooks/useHistory";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { TopBar } from "@/components/TopBar";
-import { MapView } from "@/components/MapView";
-import { LocationList } from "@/components/LocationList";
-import { CourtPanel } from "@/components/CourtPanel";
-import { CommandPalette } from "@/components/CommandPalette";
 import { LoadingSkeleton } from "@/components/LoadingSkeleton";
 import { ErrorBanner } from "@/components/ErrorBanner";
 import { applyFilter, getAvailableDates } from "@/lib/filter";
@@ -30,6 +26,29 @@ const AddFriendDialog = dynamic(
 );
 const AddHistoryDialog = dynamic(
   () => import("@/components/AddHistoryDialog").then((m) => m.AddHistoryDialog),
+  { ssr: false }
+);
+const MapView = dynamic(
+  () => import("@/components/MapView").then((m) => m.MapView),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="flex h-full w-full items-center justify-center bg-gray-100 text-sm text-gray-500">
+        Loading map...
+      </div>
+    ),
+  }
+);
+const LocationList = dynamic(
+  () => import("@/components/LocationList").then((m) => m.LocationList),
+  { ssr: false }
+);
+const CourtPanel = dynamic(
+  () => import("@/components/CourtPanel").then((m) => m.CourtPanel),
+  { ssr: false }
+);
+const CommandPalette = dynamic(
+  () => import("@/components/CommandPalette").then((m) => m.CommandPalette),
   { ssr: false }
 );
 const HistoryPanel = dynamic(
@@ -116,6 +135,14 @@ export default function Home() {
 
   return (
     <main className="relative h-screen w-screen overflow-hidden">
+      <div className="sr-only">
+        <h1>SF Tennis live public court availability</h1>
+        <p>
+          Find real-time tennis and pickleball court availability in San
+          Francisco and Mountain View. Agents can use /llms.txt, /docs.md, and
+          /openapi.json for machine-readable instructions and API access.
+        </p>
+      </div>
       <TopBar
         loading={loading}
         hasData={rawCourts.length > 0}

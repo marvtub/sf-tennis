@@ -1,4 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
+import {
+  DISCOVERY_LINK_HEADER,
+  DOCS_MARKDOWN,
+  HOME_MARKDOWN,
+} from "./lib/agent-readiness";
 
 // Simple in-memory rate limiter (per-IP, resets on deploy)
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
@@ -47,6 +52,28 @@ function applySecurityHeaders(res: NextResponse): NextResponse {
   return res;
 }
 
+function applyDiscoveryHeaders(res: NextResponse): NextResponse {
+  res.headers.set("Link", DISCOVERY_LINK_HEADER);
+  return res;
+}
+
+function acceptsMarkdown(request: NextRequest): boolean {
+  return request.headers.get("accept")?.includes("text/markdown") ?? false;
+}
+
+function markdownResponse(markdown: string): NextResponse {
+  return applySecurityHeaders(
+    applyDiscoveryHeaders(
+      new NextResponse(markdown, {
+        headers: {
+          "Content-Type": "text/markdown; charset=utf-8",
+          "Cache-Control": "public, max-age=300, s-maxage=3600",
+        },
+      })
+    )
+  );
+}
+
 export function middleware(request: NextRequest) {
   const ip =
     request.headers.get("cf-connecting-ip") ??
@@ -56,8 +83,14 @@ export function middleware(request: NextRequest) {
   const isApi = request.nextUrl.pathname.startsWith("/api/");
   const isExternalApi = request.nextUrl.pathname.startsWith("/api/history/external");
   const isPage = request.nextUrl.pathname === "/";
+  const isDocs = request.nextUrl.pathname === "/docs";
   const limit = isExternalApi ? EXTERNAL_API_LIMIT : isApi ? RATE_LIMIT_MAX_REQUESTS : MAP_LOAD_LIMIT;
   const key = `${ip}:${isExternalApi ? "external" : isApi ? "api" : "page"}`;
+
+  if (acceptsMarkdown(request)) {
+    if (isPage) return markdownResponse(HOME_MARKDOWN);
+    if (isDocs) return markdownResponse(DOCS_MARKDOWN);
+  }
 
   const now = Date.now();
   const entry = rateLimitMap.get(key);
@@ -82,18 +115,6 @@ export function middleware(request: NextRequest) {
     }
   }
 
-  // Block common bots (don't waste Mapbox loads)
-  if (isPage) {
-    const ua = request.headers.get("user-agent") ?? "";
-    const botPatterns =
-      /bot|crawl|spider|slurp|mediapartners|facebookexternalhit|bingpreview|semrush|ahrefs|mj12bot/i;
-    if (botPatterns.test(ua)) {
-      return applySecurityHeaders(
-        new NextResponse("Not available", { status: 403 })
-      );
-    }
-  }
-
   // Clean up old entries periodically (every 1000 requests)
   if (Math.random() < 0.001) {
     for (const [k, v] of rateLimitMap.entries()) {
@@ -101,9 +122,10 @@ export function middleware(request: NextRequest) {
     }
   }
 
-  return applySecurityHeaders(NextResponse.next());
+  const response = applySecurityHeaders(NextResponse.next());
+  return isPage || isDocs ? applyDiscoveryHeaders(response) : response;
 }
 
 export const config = {
-  matcher: ["/", "/api/:path*"],
+  matcher: ["/", "/docs", "/api/:path*"],
 };

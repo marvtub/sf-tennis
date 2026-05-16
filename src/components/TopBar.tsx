@@ -168,6 +168,7 @@ export function TopBar({
                   onClick={() => setShowMenu(false)}
                 />
                 <div className="absolute right-0 top-8 z-[60] bg-white rounded-lg shadow-xl border py-1 w-48">
+                  <MenuLink href="/docs">Docs</MenuLink>
                   {authenticated ? (
                     <>
                       <MenuButton
@@ -262,5 +263,22 @@ function MenuButton({
     >
       {children}
     </button>
+  );
+}
+
+function MenuLink({
+  children,
+  href,
+}: {
+  children: React.ReactNode;
+  href: string;
+}) {
+  return (
+    <a
+      href={href}
+      className="block w-full px-3 py-1.5 text-left text-sm transition-colors hover:bg-gray-50"
+    >
+      {children}
+    </a>
   );
 }

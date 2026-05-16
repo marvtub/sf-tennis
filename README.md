@@ -8,6 +8,26 @@ Real-time availability map for public tennis and pickleball courts in San Franci
 
 Pulls actual slot-level availability from rec.us (not the stale bulk schedule), overlays travel times from your location, and keeps a small personal layer for favourites, friends, and match history behind a PIN.
 
+## Agent-ready surface
+
+SF Tennis is designed to be usable by humans, search crawlers, and coding agents without asking an agent to reverse-engineer a React map UI.
+
+| Surface | URL | Purpose |
+| --- | --- | --- |
+| Human + agent docs | [`/docs`](https://tennis.marvinaziz.de/docs) | Screenshots, prompts, safety rules, API examples |
+| LLM guide | [`/llms.txt`](https://tennis.marvinaziz.de/llms.txt) | Token-efficient overview and recommended agent workflow |
+| Markdown docs | [`/docs.md`](https://tennis.marvinaziz.de/docs.md) | Markdown mirror for tools that prefer text |
+| OpenAPI | [`/openapi.json`](https://tennis.marvinaziz.de/openapi.json) | Machine-readable API contract |
+| API catalog | [`/.well-known/api-catalog`](https://tennis.marvinaziz.de/.well-known/api-catalog) | RFC 9727 linkset discovery |
+| Agent Skills | [`/.well-known/agent-skills/index.json`](https://tennis.marvinaziz.de/.well-known/agent-skills/index.json) | Skill discovery for agents |
+| Agent card | [`/.well-known/agent.json`](https://tennis.marvinaziz.de/.well-known/agent.json) | Capability card for agent ecosystems |
+
+The homepage also supports Markdown content negotiation:
+
+```bash
+curl -H 'Accept: text/markdown' https://tennis.marvinaziz.de/
+```
+
 ## Stack
 
 - Next.js 16 (App Router) + React 19, deployed to Cloudflare Workers via [`@opennextjs/cloudflare`](https://github.com/opennextjs/opennextjs-cloudflare)
@@ -30,6 +50,7 @@ npm run dev
 | `NEXT_PUBLIC_MAPBOX_TOKEN` | browser | Map tiles |
 | `MAPBOX_SECRET_TOKEN` | server | Directions API (walking + driving) |
 | `AUTH_PIN` | server | Browser PIN login |
+| `SESSION_SECRET` | server | HMAC secret for signed session cookies. Falls back to an `AUTH_PIN`-derived key if unset. |
 | `API_KEY` | server | Bearer token for the external history API |
 
 ### D1 setup
@@ -45,6 +66,7 @@ npx wrangler d1 execute sf-tennis-db --remote --file=schema.sql   # prod
 | Command | |
 | --- | --- |
 | `npm run dev` | Next dev server |
+| `npm run typecheck` | TypeScript check without a production bundle |
 | `npm run build` | Next production build |
 | `npm run cf:build` | Build the Worker bundle (`.open-next/`) |
 | `npm run cf:dev` | Run the Worker locally via Wrangler |
@@ -59,6 +81,8 @@ curl -H "Authorization: Bearer $API_KEY" https://tennis.marvinaziz.de/api/histor
 ```
 
 `GET` returns `{ history, friends, courtsUrl }`. `POST`/`PUT`/`DELETE` accept JSON bodies — see `src/app/api/history/external/route.ts` for the exact shape.
+
+Agents should read [`/llms.txt`](https://tennis.marvinaziz.de/llms.txt) and [`/openapi.json`](https://tennis.marvinaziz.de/openapi.json) before calling this endpoint, and should never print bearer tokens, friend addresses, or private history in public output.
 
 ## Notes
 

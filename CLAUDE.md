@@ -17,6 +17,18 @@ There is no test suite, no linter config, and no formatter — don't invent comm
 
 Next.js 16 (App Router) frontend deployed to **Cloudflare Workers** via OpenNext. The app is a map-based browser for real-time tennis/pickleball court availability, with a small authenticated layer for personal data (favourites, friends, match history).
 
+### Agent-readiness surface
+
+Public agent docs and discovery live in static App Router routes:
+
+- `/docs` human-friendly documentation with screenshots and prompt examples.
+- `/llms.txt` and `/llm.txt` token-efficient agent guide.
+- `/docs.md` markdown mirror of the docs page.
+- `/openapi.json` OpenAPI 3.1 contract for public availability and external history APIs.
+- `/.well-known/api-catalog`, `/.well-known/agent.json`, and `/.well-known/agent-skills/index.json` for discovery.
+
+`src/middleware.ts` also adds Link discovery headers on `/` and `/docs`, and serves markdown for those pages when `Accept: text/markdown` is requested. Keep these routes truthful: the app has API-key automation, not OAuth or MCP access.
+
 ### Data flow for court availability (`src/lib/recus.ts`)
 
 rec.us's bulk availability endpoint returns *theoretical* schedule slots — it does **not** reflect actual bookings. The code deliberately does a two-step fetch:
