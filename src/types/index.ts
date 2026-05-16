@@ -113,21 +113,3 @@ export interface AvailabilityFilter {
   timeFrom: string | null; // "09:00" or null
   timeTo: string | null; // "17:00" or null
 }
-
-// ── Persisted data types (D1) ──
-
-export interface FavouriteCourt {
-  locationId: string;
-  createdAt: string;
-}
-
-export interface PlayHistory {
-  id: string;
-  locationId: string;
-  locationName: string;
-  courtNumber: string | null;
-  date: string; // "2026-03-29"
-  time: string | null; // "18:00"
-  notes: string;
-  createdAt: string;
-}

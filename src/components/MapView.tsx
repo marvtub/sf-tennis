@@ -12,7 +12,6 @@ import { TravelBadgeMini } from "./TravelBadge";
 
 interface MapViewProps {
   courts: CourtLocation[];
-  favourites: Set<string>;
   selectedId: string | null;
   onSelectCourt: (id: string | null) => void;
   travelTimes: Map<string, TravelTime>;
@@ -23,7 +22,6 @@ interface MapViewProps {
 
 export function MapView({
   courts,
-  favourites,
   selectedId,
   onSelectCourt,
   travelTimes,
@@ -97,7 +95,6 @@ export function MapView({
           key={loc.id}
           location={loc}
           isSelected={selectedId === loc.id}
-          isFavourite={favourites.has(loc.id)}
           travelTime={travelTimes.get(loc.id)}
           onSelect={handleCourtSelect}
         />
@@ -110,18 +107,16 @@ export function MapView({
 interface CourtMarkerProps {
   location: CourtLocation;
   isSelected: boolean;
-  isFavourite: boolean;
   travelTime: TravelTime | undefined;
   onSelect: (id: string) => void;
 }
 
 const CourtMarker = memo(
-  function CourtMarker({
-    location,
-    isSelected,
-    isFavourite,
-    travelTime,
-    onSelect,
+    function CourtMarker({
+      location,
+      isSelected,
+      travelTime,
+      onSelect,
   }: CourtMarkerProps) {
     const handleClick = useCallback(() => {
       onSelect(location.id);
@@ -146,7 +141,6 @@ const CourtMarker = memo(
           <CourtPin
             location={location}
             isSelected={isSelected}
-            isFavourite={isFavourite}
             onClick={handleClick}
           />
           <TravelBadgeMini travelTime={travelTime} />
@@ -161,7 +155,6 @@ const CourtMarker = memo(
       prev.location.lat === next.location.lat &&
       prev.location.lng === next.location.lng &&
       prev.isSelected === next.isSelected &&
-      prev.isFavourite === next.isFavourite &&
       prev.travelTime?.walking?.durationMinutes ===
         next.travelTime?.walking?.durationMinutes &&
       prev.onSelect === next.onSelect

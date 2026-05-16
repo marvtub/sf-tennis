@@ -14,7 +14,7 @@ import {
 export const metadata: Metadata = {
   title: "SF Tennis Documentation",
   description:
-    "Documentation for SF Tennis court availability, API access, screenshots, and match history automation.",
+    "Documentation for SF Tennis court availability, API access, screenshots, and planning workflows.",
   alternates: {
     canonical: "/docs",
     types: {
@@ -43,7 +43,7 @@ const sidebarGroups = [
     title: "API reference",
     links: [
       ["Availability", "#availability-api"],
-      ["History", "#history-api"],
+      ["Travel", "#travel-api"],
       ["Discovery files", "#discovery"],
     ],
   },
@@ -80,15 +80,15 @@ const screenshots = [
 const examples = [
   {
     title: "Find courts tonight",
-    text: "Use SF Tennis to find public tennis courts in San Francisco with open slots tonight. Start from /llms.txt, call the public courts API, prefer courts with availability today, and summarize the top options with location names, times, and any available weather context.",
+    text: `Use SF Tennis at ${SITE_URL} to find public tennis courts in San Francisco with open slots tonight. Start from ${SITE_URL}/llms.txt, call the public courts API, prefer courts with availability today, and summarize the top options with location names, times, and any available weather context.`,
   },
   {
     title: "Plan a pickleball session",
-    text: "Use SF Tennis to find pickleball availability in Mountain View this week. Filter for weekend slots, return a concise plan, and include the API URLs used so the result can be verified.",
+    text: `Use SF Tennis at ${SITE_URL} to find pickleball availability in Mountain View this week. Filter for weekend slots, return a concise plan, and include the API URLs used so the result can be verified.`,
   },
   {
-    title: "Log a match",
-    text: "I will provide my SF Tennis API key. Use /api/history/external to add a match history entry after confirming the exact court, date, time, and notes with me. Never expose the API key in your answer.",
+    title: "Compare nearby options",
+    text: `Use SF Tennis at ${SITE_URL} to compare tennis courts near my location. Use ${SITE_URL}/api/courts for live slots and ${SITE_URL}/api/directions for walking and driving estimates when coordinates are available.`,
   },
 ];
 
@@ -106,7 +106,7 @@ const discoveryLinks = [
   {
     label: "OpenAPI",
     href: "/openapi.json",
-    description: "Machine-readable contract for availability and history APIs.",
+    description: "Machine-readable contract for availability and travel APIs.",
   },
   {
     label: "API catalog",
@@ -114,19 +114,9 @@ const discoveryLinks = [
     description: "Linkset discovery for public API resources.",
   },
   {
-    label: "OAuth metadata",
-    href: "/.well-known/oauth-authorization-server",
-    description: "OAuth-compatible authorization server metadata.",
-  },
-  {
-    label: "Protected resource",
-    href: "/.well-known/oauth-protected-resource",
-    description: "Protected resource metadata for the history API.",
-  },
-  {
     label: "GitHub repository",
     href: GITHUB_URL,
-    description: "Source code, deployment config, and schema.",
+    description: "Source code and deployment configuration.",
   },
 ];
 
@@ -135,23 +125,19 @@ const endpointGroups = [
     id: "availability-api",
     title: "Availability API",
     description:
-      "Read-only endpoints for live court inventory, slot availability, and travel estimates.",
+      "Read-only endpoints for live court inventory, slot availability, and service health.",
     endpoints: [
       ["GET", "/api/courts?sport=tennis&city=sf", "Court availability by sport and city."],
-      ["GET", "/api/directions", "Walking and driving estimates for up to 50 locations."],
       ["GET", "/api/health", "Basic service health check."],
     ],
   },
   {
-    id: "history-api",
-    title: "History API",
+    id: "travel-api",
+    title: "Travel API",
     description:
-      "Bearer-token endpoints for private match history. Use only after explicit user authorization.",
+      "Public travel-time helper for comparing court options from a starting coordinate.",
     endpoints: [
-      ["GET", "/api/history/external", "List match history and the public courts API hint."],
-      ["POST", "/api/history/external", "Create a match history entry."],
-      ["PUT", "/api/history/external", "Update a match history entry."],
-      ["DELETE", "/api/history/external", "Delete a match history entry."],
+      ["GET", "/api/directions", "Walking and driving estimates for up to 50 locations."],
     ],
   },
 ];
@@ -182,7 +168,7 @@ export default function DocsPage() {
             <p className="mt-5 max-w-2xl text-lg leading-8 text-slate-600">
               Live public tennis and pickleball availability for San Francisco
               and Mountain View, with a compact API surface for availability and
-              match history workflows.
+              planning workflows.
             </p>
 
             <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-slate-500">
@@ -213,7 +199,7 @@ export default function DocsPage() {
             id="examples"
             eyebrow="Guides"
             title="Example requests"
-            description="Short requests that map cleanly to the API and keep private history protected."
+            description="Short requests that point agents to the live site and map cleanly to the public API."
           >
             <div className="space-y-5">
               {examples.map((example) => (
@@ -226,7 +212,7 @@ export default function DocsPage() {
             id="api"
             eyebrow="Reference"
             title="API"
-            description="Use public endpoints for availability. Use the protected history endpoint only with a bearer API key."
+            description="Use public endpoints for live court availability, travel estimates, and health checks."
           >
             <div className="space-y-10">
               {endpointGroups.map((group) => (
@@ -248,13 +234,12 @@ export default function DocsPage() {
             id="safety"
             eyebrow="Operations"
             title="Safety notes"
-            description="The public availability API is safe to call without credentials. Treat browser sessions and history API keys as private."
+            description="The public availability API is safe to call without credentials, but it still represents live upstream data."
           >
             <ul className="space-y-3 text-sm leading-7 text-slate-600">
-              <li>Never print bearer tokens, PINs, or private history.</li>
               <li>Report unavailable live data instead of guessing.</li>
               <li>Prefer the API contract over scraping the client UI.</li>
-              <li>Use the browser PIN only in the app login flow.</li>
+              <li>Include source URLs in summaries so results can be verified.</li>
             </ul>
           </Section>
 
@@ -281,9 +266,7 @@ function MobileHeader() {
         <a href="/" className="text-sm font-semibold text-slate-950">
           SF Tennis
         </a>
-        <a href="/openapi.json" className="text-sm font-medium text-emerald-700">
-          OpenAPI
-        </a>
+        <AppCta className="px-3 py-1.5 text-xs" />
       </div>
       <nav
         aria-label="Documentation sections"
@@ -311,6 +294,7 @@ function Sidebar() {
           SF Tennis
         </a>
         <p className="mt-1 text-sm text-slate-500">Documentation</p>
+        <AppCta className="mt-4 w-full justify-center px-3 py-2 text-sm" />
       </div>
 
       <nav
@@ -480,6 +464,18 @@ function TextLink({ href, children }: { href: string; children: React.ReactNode 
       className="inline-flex items-center gap-2 text-emerald-700 transition hover:text-emerald-900"
     >
       {children}
+      <ArrowIcon />
+    </a>
+  );
+}
+
+function AppCta({ className = "" }: { className?: string }) {
+  return (
+    <a
+      href="/"
+      className={`group inline-flex items-center gap-2 rounded-md bg-slate-950 font-semibold text-white transition hover:bg-emerald-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 ${className}`}
+    >
+      Open app
       <ArrowIcon />
     </a>
   );

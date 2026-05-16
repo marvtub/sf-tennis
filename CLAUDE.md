@@ -7,15 +7,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `npm run dev` — Next.js dev server (default, hits real rec.us + Mapbox APIs; uses `.data.json` for persistence)
 - `npm run build` — Next.js production build (also runs typecheck via `tsc` through Next)
 - `npm run cf:build` — Build the Cloudflare Workers bundle via `@opennextjs/cloudflare` (output in `.open-next/`)
-- `npm run cf:dev` — Run the built Worker locally with Wrangler (uses real D1 binding if configured)
+- `npm run cf:dev` — Run the built Worker locally with Wrangler
 - `npm run cf:deploy` — Deploy to Cloudflare Workers (route: `tennis.marvinaziz.de/*`)
-- D1 schema lives in `schema.sql`; apply with `npx wrangler d1 execute sf-tennis-db --file=schema.sql` (add `--remote` for prod).
 
 There is no test suite, no linter config, and no formatter — don't invent commands that aren't in `package.json`.
 
 ## Architecture
 
-Next.js 16 (App Router) frontend deployed to **Cloudflare Workers** via OpenNext. The app is a map-based browser for real-time tennis/pickleball court availability, with a small authenticated layer for personal data (favourites, match history).
+Next.js 16 (App Router) frontend deployed to **Cloudflare Workers** via OpenNext. The app is a map-based browser for real-time tennis/pickleball court availability.
 
 ### Documentation and discovery surface
 
@@ -24,11 +23,10 @@ Public docs and discovery live in static App Router routes:
 - `/docs` documentation with screenshots and example requests.
 - `/llms.txt` and `/llm.txt` compact integration guide.
 - `/docs.md` markdown mirror of the docs page.
-- `/openapi.json` OpenAPI 3.1 contract for public availability and external history APIs.
-- `/.well-known/api-catalog`, `/.well-known/agent.json`, `/.well-known/agent-skills/index.json`, `/.well-known/oauth-authorization-server`, and `/.well-known/oauth-protected-resource` for discovery.
-- `/oauth/token` supports a narrow `client_credentials` compatibility flow: the user-provided `API_KEY` is the `client_secret`, and the returned bearer token is the same history API key.
+- `/openapi.json` OpenAPI 3.1 contract for public availability, directions, and health APIs.
+- `/.well-known/api-catalog`, `/.well-known/agent.json`, and `/.well-known/agent-skills/index.json` for discovery.
 
-`src/middleware.ts` also adds Link discovery headers on `/` and `/docs`, and serves markdown for those pages when `Accept: text/markdown` is requested. Keep these routes truthful: the app has API-key automation with OAuth-compatible metadata, not a full user-delegated OAuth authorization flow or MCP access.
+`src/middleware.ts` also adds Link discovery headers on `/` and `/docs`, and serves markdown for those pages when `Accept: text/markdown` is requested. Keep these routes truthful: the app exposes public availability and travel data, not private user data, OAuth, or MCP access.
 
 ### Data flow for court availability (`src/lib/recus.ts`)
 
@@ -43,30 +41,19 @@ After availability is assembled, `enrichCourtsWithWeather` (`src/lib/weather.ts`
 
 Cities are configured in `CITIES` (`src/lib/constants.ts`) and piped through as the `organizationSlug` query param. Sports are filtered client-side of rec.us by matching `sportId` against `SPORT_ID_TENNIS` / `SPORT_ID_PICKLEBALL`.
 
-### Persistence: D1 with a local JSON fallback (`src/lib/db.ts`)
-
-In Workers, `getDb()` pulls the D1 binding via `getCloudflareContext().env.DB` (the `require` trick in `getDb` is there on purpose — it avoids the bundler statically resolving `@opennextjs/cloudflare` during Next's build). In local `next dev` there is no binding, so every db function falls through to a JSON read/write against `.data.json` at the repo root. Both paths must stay in sync when you add a new query.
-
-Schema (`schema.sql`): `favourites` and `play_history`.
-
-### Auth & rate limiting
-
-Two separate auth mechanisms:
-
-- **Browser PIN auth** (`src/lib/auth.ts`): single `AUTH_PIN` env var, session is a base64-encoded `{ts, pin}` blob stored in the `sf-tennis-session` cookie, verified with a constant-time compare. Guards personal-data routes via `requireAuth()` (`src/lib/auth-guard.ts`).
-- **API-key auth** (`src/app/api/history/external/route.ts`): `Authorization: Bearer <API_KEY>` header, timing-safe compare, separate rate limit. Designed for authorized clients to read/write `play_history`.
+### Rate limiting
 
 Rate limiting (`src/middleware.ts`) is in-memory per-IP — **resets on every deploy** and is per-isolate, not global. It's a coarse guard, not a real quota. The middleware also 403s common SEO bots on `/` to avoid burning Mapbox loads.
 
 ### Frontend composition (`src/app/page.tsx`)
 
-The home page is the single stateful root. It composes feature hooks (`useCourts`, `useTravelTimes`, `useUserLocation`, `useAuth`, `useFavourites`, `useHistory`) and passes slices down to presentational components. Dialogs and `HistoryPanel` are `next/dynamic`-imported to keep initial JS small. `MapView` uses `react-map-gl` + Mapbox GL; `/api/directions` proxies Mapbox Directions with a 24h cache so the client never sees the secret token.
+The home page is the single stateful root. It composes feature hooks (`useCourts`, `useTravelTimes`, `useUserLocation`) and passes slices down to presentational components. `MapView` uses `react-map-gl` + Mapbox GL; `/api/directions` proxies Mapbox Directions with a 24h cache so the client never sees the secret token.
 
 ### Deployment details
 
 - `next.config.ts` disables `next/image` optimization because CF Workers doesn't support it.
 - `open-next.config.ts` is intentionally empty — default adapter behaviour is what we want.
-- `wrangler.jsonc` wires the D1 binding, the `ASSETS` binding for static files, and the production route. `compatibility_flags: ["nodejs_compat"]` is required (db.ts uses `fs` in the local fallback path, and Buffer in auth.ts).
+- `wrangler.jsonc` wires the `ASSETS` binding for static files and the production route.
 
 ## Environment variables
 
@@ -74,6 +61,3 @@ Required in `.env.local` for dev and as Worker secrets in prod:
 
 - `NEXT_PUBLIC_MAPBOX_TOKEN` — public Mapbox token for map tiles (shipped to browser).
 - `MAPBOX_SECRET_TOKEN` — server-side Mapbox token for `/api/directions`.
-- `AUTH_PIN` — PIN for browser login.
-- `SESSION_SECRET` — HMAC secret used to sign session cookies. Recommended in prod. If unset, the signing key is derived from `AUTH_PIN` as a fallback (still better than the previous design that embedded the PIN in the cookie, but a dedicated secret means rotating the PIN doesn't invalidate sessions and vice-versa).
-- `API_KEY` — bearer token for `/api/history/external`.

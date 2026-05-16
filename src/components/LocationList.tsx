@@ -8,7 +8,6 @@ type SortMode = "distance" | "name";
 interface LocationListProps {
   courts: CourtLocation[];
   travelTimes: Map<string, TravelTime>;
-  favourites: Set<string>;
   onSelectCourt: (id: string) => void;
   selectedId: string | null;
   loading?: boolean;
@@ -17,7 +16,6 @@ interface LocationListProps {
 export function LocationList({
   courts,
   travelTimes,
-  favourites,
   onSelectCourt,
   selectedId,
   loading = false,
@@ -103,7 +101,6 @@ export function LocationList({
               const travel = travelTimes.get(court.id);
               const walkMin = travel?.walking?.durationMinutes;
               const driveMin = travel?.driving?.durationMinutes;
-              const isFav = favourites.has(court.id);
               const isSelected = selectedId === court.id;
 
               return (
@@ -131,7 +128,6 @@ export function LocationList({
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <span className="text-sm font-semibold truncate">
-                          {isFav && "⭐ "}
                           {court.name}
                         </span>
                       </div>

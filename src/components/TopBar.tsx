@@ -10,7 +10,6 @@ interface TopBarProps {
   loading: boolean;
   hasData: boolean;
   fetchedAt: string | null;
-  authenticated: boolean;
   viewMode: "map" | "list";
   sport: Sport;
   city: CityId;
@@ -20,17 +19,12 @@ interface TopBarProps {
   onRequestLocation: () => void;
   onToggleView: () => void;
   onShowSearch: () => void;
-  onShowLogin: () => void;
-  onShowAddHistory: () => void;
-  onShowHistory: () => void;
-  onLogout: () => void;
 }
 
 export function TopBar({
   loading,
   hasData,
   fetchedAt,
-  authenticated,
   viewMode,
   sport,
   city,
@@ -40,10 +34,6 @@ export function TopBar({
   onRequestLocation,
   onToggleView,
   onShowSearch,
-  onShowLogin,
-  onShowAddHistory,
-  onShowHistory,
-  onLogout,
 }: TopBarProps) {
   const [showMenu, setShowMenu] = useState(false);
   const cityConfig = CITIES[city];
@@ -103,17 +93,14 @@ export function TopBar({
             </span>
           )}
 
-          {/* Auth-gated refresh */}
-          {authenticated && (
-            <button
-              onClick={onRefresh}
-              disabled={loading}
-              aria-label="Refresh courts"
-              className="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded disabled:opacity-50 transition-colors"
-            >
-              ↻
-            </button>
-          )}
+          <button
+            onClick={onRefresh}
+            disabled={loading}
+            aria-label="Refresh courts"
+            className="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded disabled:opacity-50 transition-colors"
+          >
+            ↻
+          </button>
 
           <button
             onClick={onRequestLocation}
@@ -162,44 +149,6 @@ export function TopBar({
                 />
                 <div className="absolute right-0 top-8 z-[60] bg-white rounded-lg shadow-xl border py-1 w-48">
                   <MenuLink href="/docs">Docs</MenuLink>
-                  {authenticated ? (
-                    <>
-                      <MenuButton
-                        onClick={() => {
-                          onShowAddHistory();
-                          setShowMenu(false);
-                        }}
-                      >
-                        🎾 Log Match
-                      </MenuButton>
-                      <MenuButton
-                        onClick={() => {
-                          onShowHistory();
-                          setShowMenu(false);
-                        }}
-                      >
-                        📋 Match History
-                      </MenuButton>
-                      <div className="border-t my-1" />
-                      <MenuButton
-                        onClick={() => {
-                          onLogout();
-                          setShowMenu(false);
-                        }}
-                      >
-                        🔓 Logout
-                      </MenuButton>
-                    </>
-                  ) : (
-                    <MenuButton
-                      onClick={() => {
-                        onShowLogin();
-                        setShowMenu(false);
-                      }}
-                    >
-                      🔐 Login
-                    </MenuButton>
-                  )}
                 </div>
               </>
             )}
@@ -207,23 +156,6 @@ export function TopBar({
         </div>
       </div>
     </div>
-  );
-}
-
-function MenuButton({
-  children,
-  onClick,
-}: {
-  children: React.ReactNode;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      className="w-full text-left px-3 py-1.5 text-sm hover:bg-gray-50 transition-colors"
-    >
-      {children}
-    </button>
   );
 }
 

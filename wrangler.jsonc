@@ -8,13 +8,6 @@
     "directory": ".open-next/assets",
     "binding": "ASSETS"
   },
-  "d1_databases": [
-    {
-      "binding": "DB",
-      "database_name": "sf-tennis-db",
-      "database_id": "b7fdcbb5-b3cc-4bd1-a023-069c012bf27d"
-    }
-  ],
   "routes": [
     {
       "pattern": "tennis.marvinaziz.de/*",

@@ -8,7 +8,7 @@ const openapi = {
     title: "SF Tennis API",
     version: "1.0.0",
     description:
-      "Public court availability and user-authorized match history automation for SF Tennis.",
+      "Public court availability and travel estimates for SF Tennis.",
     license: {
       name: "ISC",
     },
@@ -17,7 +17,6 @@ const openapi = {
   tags: [
     { name: "Availability" },
     { name: "Travel" },
-    { name: "History" },
     { name: "Health" },
   ],
   paths: {
@@ -109,116 +108,8 @@ const openapi = {
         },
       },
     },
-    "/api/history/external": {
-      get: {
-        tags: ["History"],
-        summary: "List user match history for authorized automations.",
-        security: [{ bearerApiKey: [] }, { oauthClientCredentials: ["history:read"] }],
-        responses: {
-          "200": {
-            description: "Match history entries and a public courts API hint.",
-            content: {
-              "application/json": {
-                schema: { $ref: "#/components/schemas/HistoryListResponse" },
-              },
-            },
-          },
-          "401": { description: "Invalid or missing API key." },
-        },
-      },
-      post: {
-        tags: ["History"],
-        summary: "Create a match history entry.",
-        security: [{ bearerApiKey: [] }, { oauthClientCredentials: ["history:write"] }],
-        requestBody: {
-          required: true,
-          content: {
-            "application/json": {
-              schema: { $ref: "#/components/schemas/HistoryMutation" },
-            },
-          },
-        },
-        responses: {
-          "200": {
-            description: "Created entry id.",
-            content: {
-              "application/json": {
-                schema: { $ref: "#/components/schemas/MutationResponse" },
-              },
-            },
-          },
-          "400": { description: "Invalid body." },
-          "401": { description: "Invalid or missing API key." },
-        },
-      },
-      put: {
-        tags: ["History"],
-        summary: "Update a match history entry.",
-        security: [{ bearerApiKey: [] }, { oauthClientCredentials: ["history:write"] }],
-        requestBody: {
-          required: true,
-          content: {
-            "application/json": {
-              schema: {
-                allOf: [
-                  { type: "object", required: ["id"], properties: { id: { type: "string" } } },
-                  { $ref: "#/components/schemas/HistoryMutation" },
-                ],
-              },
-            },
-          },
-        },
-        responses: {
-          "200": { description: "Updated entry." },
-          "400": { description: "Invalid body." },
-          "401": { description: "Invalid or missing API key." },
-          "404": { description: "Entry not found." },
-        },
-      },
-      delete: {
-        tags: ["History"],
-        summary: "Delete a match history entry.",
-        security: [{ bearerApiKey: [] }, { oauthClientCredentials: ["history:write"] }],
-        requestBody: {
-          required: true,
-          content: {
-            "application/json": {
-              schema: {
-                type: "object",
-                required: ["id"],
-                properties: { id: { type: "string", maxLength: 100 } },
-              },
-            },
-          },
-        },
-        responses: {
-          "200": { description: "Deleted entry." },
-          "400": { description: "Invalid body." },
-          "401": { description: "Invalid or missing API key." },
-        },
-      },
-    },
   },
   components: {
-    securitySchemes: {
-      bearerApiKey: {
-        type: "http",
-        scheme: "bearer",
-        description: "User-owned API key configured as API_KEY on the server.",
-      },
-      oauthClientCredentials: {
-        type: "oauth2",
-        flows: {
-          clientCredentials: {
-            tokenUrl: `${SITE_URL}/oauth/token`,
-            scopes: {
-              "history:read": "Read user match history.",
-              "history:write": "Create, update, and delete user match history.",
-            },
-          },
-        },
-      },
-    },
     schemas: {
       HealthResponse: {
         type: "object",
@@ -300,32 +191,6 @@ const openapi = {
         properties: {
           durationMinutes: { type: "number" },
           distanceMeters: { type: "number" },
-        },
-      },
-      HistoryListResponse: {
-        type: "object",
-        properties: {
-          history: { type: "array", items: { type: "object", additionalProperties: true } },
-          courtsUrl: { type: "string" },
-        },
-      },
-      HistoryMutation: {
-        type: "object",
-        required: ["locationId", "locationName", "date"],
-        properties: {
-          locationId: { type: "string", maxLength: 500 },
-          locationName: { type: "string", maxLength: 500 },
-          courtNumber: { type: "string", maxLength: 20 },
-          date: { type: "string", pattern: "^\\d{4}-\\d{2}-\\d{2}$" },
-          time: { type: "string", maxLength: 5 },
-          notes: { type: "string", maxLength: 1000 },
-        },
-      },
-      MutationResponse: {
-        type: "object",
-        properties: {
-          ok: { type: "boolean" },
-          id: { type: "string" },
         },
       },
     },

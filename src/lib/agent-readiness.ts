@@ -13,8 +13,6 @@ export const DISCOVERY_LINK_HEADER = [
   '</docs.md>; rel="alternate"; type="text/markdown"; title="SF Tennis docs"',
   '</openapi.json>; rel="service-desc"; type="application/vnd.oai.openapi+json"',
   '</.well-known/api-catalog>; rel="api-catalog"; type="application/linkset+json"',
-  '</.well-known/oauth-authorization-server>; rel="oauth-authorization-server"; type="application/json"',
-  '</.well-known/oauth-protected-resource>; rel="oauth-protected-resource"; type="application/json"',
   '</.well-known/agent-skills/index.json>; rel="agent-skills"; type="application/json"',
   '</.well-known/agent.json>; rel="agent-card"; type="application/json"',
 ].join(", ");
@@ -32,8 +30,7 @@ Repository: ${GITHUB_URL}
 - Shows live court availability from rec.us using per-court availability checks.
 - Supports tennis and pickleball in San Francisco and Mountain View.
 - Adds travel-time overlays from a user's location through Mapbox Directions.
-- Keeps optional personal data, such as favourites and match history, behind PIN auth.
-- Exposes a public courts API and an API-key protected history API for user-owned automations.
+- Exposes public courts, directions, and health APIs for planning workflows.
 
 ## Developer entry points
 
@@ -41,8 +38,6 @@ Repository: ${GITHUB_URL}
 - Markdown docs: ${SITE_URL}/docs.md
 - OpenAPI contract: ${SITE_URL}/openapi.json
 - API catalog: ${SITE_URL}/.well-known/api-catalog
-- OAuth authorization metadata: ${SITE_URL}/.well-known/oauth-authorization-server
-- OAuth protected resource metadata: ${SITE_URL}/.well-known/oauth-protected-resource
 - Skill discovery: ${SITE_URL}/.well-known/agent-skills/index.json
 
 ## Recommended first request
@@ -54,7 +49,7 @@ export const DOCS_MARKDOWN = `# SF Tennis documentation
 
 Last updated: ${LAST_UPDATED}
 
-SF Tennis helps people find playable public tennis and pickleball courts in San Francisco and Mountain View. It pulls real slot-level availability from rec.us, overlays travel times, and keeps personal favourites and match history private behind PIN auth.
+SF Tennis helps people find playable public tennis and pickleball courts in San Francisco and Mountain View. It pulls real slot-level availability from rec.us and overlays travel times.
 
 ## Quick links
 
@@ -63,8 +58,6 @@ SF Tennis helps people find playable public tennis and pickleball courts in San 
 - Integration guide: ${SITE_URL}/llms.txt
 - OpenAPI: ${SITE_URL}/openapi.json
 - API catalog: ${SITE_URL}/.well-known/api-catalog
-- OAuth authorization metadata: ${SITE_URL}/.well-known/oauth-authorization-server
-- OAuth protected resource metadata: ${SITE_URL}/.well-known/oauth-protected-resource
 - Skill discovery: ${SITE_URL}/.well-known/agent-skills/index.json
 - GitHub repo: ${GITHUB_URL}
 - Project page: ${PROJECT_URL}
@@ -75,11 +68,10 @@ SF Tennis helps people find playable public tennis and pickleball courts in San 
 2. Pick tennis or pickleball, then San Francisco or Mountain View.
 3. Use the map pins or list view to find courts with slots today or later this week.
 4. Enable location to compare walking and driving times.
-5. Log in with the private PIN to save favourites and log match history.
 
 ## API workflow
 
-Start with read-only data unless the user explicitly provides an API key and asks you to update their match history.
+Start with public read-only data. No credentials are required.
 
 Useful public endpoints:
 
@@ -88,35 +80,26 @@ Useful public endpoints:
 - GET /api/directions?origin=37.7599,-122.4148&locations=loc1:37.76,-122.43
 - GET /api/health
 
-Protected automation endpoint:
-
-- /api/history/external requires Authorization: Bearer <API_KEY>
-- GET lists history and a courts API hint.
-- POST creates a match entry.
-- PUT updates a match entry.
-- DELETE deletes a match entry.
-- OAuth-style client_credentials metadata is published for discovery. If the user gives you the API key as a client_secret, /oauth/token can exchange it for the same bearer token shape used by /api/history/external.
-
-Do not guess or invent API keys, PINs, home addresses, or private history. Ask the user for credentials out of band when needed.
+Do not invent availability. If the public API fails, report that live availability could not be fetched.
 
 ## Example requests
 
 ### Find courts tonight
 
 \`\`\`text
-Use SF Tennis to find public tennis courts in San Francisco with open slots tonight. Start from /llms.txt, call the public courts API, prefer courts with availability today, and summarize the top options with location names, times, and any available weather context.
+Use SF Tennis at ${SITE_URL} to find public tennis courts in San Francisco with open slots tonight. Start from ${SITE_URL}/llms.txt, call the public courts API, prefer courts with availability today, and summarize the top options with location names, times, and any available weather context.
 \`\`\`
 
 ### Plan a pickleball session
 
 \`\`\`text
-Use SF Tennis to find pickleball availability in Mountain View this week. Filter for weekend slots, return a concise plan, and include the API URLs you used so I can verify the result.
+Use SF Tennis at ${SITE_URL} to find pickleball availability in Mountain View this week. Filter for weekend slots, return a concise plan, and include the API URLs you used so I can verify the result.
 \`\`\`
 
-### Log a match
+### Compare nearby options
 
 \`\`\`text
-I will provide my SF Tennis API key. Use /api/history/external to add a match history entry after confirming the exact court, date, time, and notes with me. Never expose the API key in your answer.
+Use SF Tennis at ${SITE_URL} to compare tennis courts near my location. Use ${SITE_URL}/api/courts for live slots and ${SITE_URL}/api/directions for walking and driving estimates when coordinates are available.
 \`\`\`
 
 ## Screenshots
@@ -143,8 +126,6 @@ Last updated: ${LAST_UPDATED}
 - Markdown docs: ${SITE_URL}/docs.md
 - OpenAPI: ${SITE_URL}/openapi.json
 - API catalog: ${SITE_URL}/.well-known/api-catalog
-- OAuth authorization metadata: ${SITE_URL}/.well-known/oauth-authorization-server
-- OAuth protected resource metadata: ${SITE_URL}/.well-known/oauth-protected-resource
 - Skill discovery: ${SITE_URL}/.well-known/agent-skills/index.json
 - Capability card: ${SITE_URL}/.well-known/agent.json
 - GitHub: ${GITHUB_URL}
@@ -152,7 +133,7 @@ Last updated: ${LAST_UPDATED}
 
 ## What integrations should know
 
-SF Tennis is useful when a user wants to find, compare, or log public tennis and pickleball court sessions. Public court availability does not require authentication. Personal favourites and match history are private.
+SF Tennis is useful when a user wants to find, compare, or plan public tennis and pickleball court sessions. Public court availability does not require authentication.
 
 ## Public API
 
@@ -164,58 +145,47 @@ SF Tennis is useful when a user wants to find, compare, or log public tennis and
 
 Read the machine contract at ${SITE_URL}/openapi.json before writing code against the API.
 
-## Protected API
-
-${SITE_URL}/api/history/external uses a bearer API key. Use it only when the user explicitly supplies an API key and asks you to read or modify their match history.
-
-For clients that require OAuth discovery, SF Tennis publishes OAuth authorization server metadata and OAuth protected resource metadata. The token endpoint supports client_credentials by treating the user-provided API key as the client_secret and returns a bearer token for the same protected history API.
-
 ## Safe automation behavior
 
-- Do not ask for or reveal the browser PIN unless the user is logging in directly.
 - Do not invent availability. If the courts API fails, report that live availability could not be fetched.
-- Do not expose private history in public output.
 - Prefer the docs and OpenAPI contract over scraping the client UI.
 - Include source URLs in summaries so the user can verify the result.
 
 ## High-value prompts
 
 \`\`\`text
-Find me open tennis courts in San Francisco tonight using SF Tennis. Use the public API, rank by slots today and travel time when available, and cite the API URL.
+Find me open tennis courts in San Francisco tonight using SF Tennis at ${SITE_URL}. Use the public API, rank by slots today and travel time when available, and cite the API URL.
 \`\`\`
 
 \`\`\`text
-Use SF Tennis to plan a weekend pickleball session in Mountain View. Return the best time windows and courts, then tell me what data was unavailable.
+Use SF Tennis at ${SITE_URL} to plan a weekend pickleball session in Mountain View. Return the best time windows and courts, then tell me what data was unavailable.
 \`\`\`
 
 \`\`\`text
-Use my SF Tennis API key to log a match. Confirm the location, date, time, court number, and notes before sending the POST request.
+Use SF Tennis at ${SITE_URL} to compare tennis courts near my location. Use the courts API for slots and the directions API for travel estimates when coordinates are available.
 \`\`\`
 
 ## Implementation notes for code integrations
 
 - Framework: Next.js App Router on Cloudflare Workers via OpenNext.
 - Map: Mapbox GL through react-map-gl.
-- Persistence: Cloudflare D1 in production, local JSON fallback in dev.
 - Source of truth for availability: per-court rec.us availability, not the stale bulk endpoint alone.
 `;
 
 export const SKILL_MD = `---
 name: sf-tennis
-description: Use SF Tennis to find public tennis or pickleball court availability, plan sessions, and safely work with match history API access.
+description: Use SF Tennis to find public tennis or pickleball court availability and plan sessions.
 ---
 
 # SF Tennis
 
-Use this skill when a user asks about public tennis or pickleball availability in San Francisco or Mountain View, or asks to log SF Tennis match history.
+Use this skill when a user asks about public tennis or pickleball availability in San Francisco or Mountain View.
 
 ## Start here
 
 1. Read ${SITE_URL}/llms.txt for the current integration guide.
 2. Read ${SITE_URL}/openapi.json before calling any endpoint.
 3. Use public endpoints for availability. They do not require authentication.
-4. Use /api/history/external only when the user explicitly provides an API key.
-5. If OAuth discovery is required, read /.well-known/oauth-authorization-server and /.well-known/oauth-protected-resource. The client_credentials exchange accepts the user-provided API key as client_secret.
 
 ## Public availability workflow
 
@@ -225,18 +195,11 @@ Use this skill when a user asks about public tennis or pickleball availability i
 4. Prefer locations with totalSlotsToday > 0 when the user asks for today.
 5. Include location names, available slot times, court numbers, and the fetchedAt timestamp in the answer.
 
-## Private history workflow
-
-1. Ask the user to provide the API key outside public chat if needed.
-2. Confirm the exact mutation before POST, PUT, or DELETE.
-3. Never print bearer tokens.
-4. Keep private history out of public summaries.
-
 ## Common prompts
 
 - "Find open tennis courts near me tonight."
 - "Plan a pickleball session in Mountain View this weekend."
-- "Log my match at Dolores Park on Friday at 5 pm."
+- "Compare tennis courts near my location."
 `;
 
 export async function sha256Digest(content: string): Promise<string> {

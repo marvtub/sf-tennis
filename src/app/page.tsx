@@ -5,9 +5,6 @@ import dynamic from "next/dynamic";
 import { useCourts } from "@/hooks/useCourts";
 import { useTravelTimes } from "@/hooks/useTravelTimes";
 import { useUserLocation } from "@/hooks/useUserLocation";
-import { useAuth } from "@/hooks/useAuth";
-import { useFavourites } from "@/hooks/useFavourites";
-import { useHistory } from "@/hooks/useHistory";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { TopBar } from "@/components/TopBar";
 import { LoadingSkeleton } from "@/components/LoadingSkeleton";
@@ -15,15 +12,6 @@ import { ErrorBanner } from "@/components/ErrorBanner";
 import { WebMcpBridge } from "@/components/WebMcpBridge";
 import { applyFilter, getAvailableDates } from "@/lib/filter";
 
-// Lazy-load dialogs — only fetched when user opens them
-const LoginDialog = dynamic(
-  () => import("@/components/LoginDialog").then((m) => m.LoginDialog),
-  { ssr: false }
-);
-const AddHistoryDialog = dynamic(
-  () => import("@/components/AddHistoryDialog").then((m) => m.AddHistoryDialog),
-  { ssr: false }
-);
 const MapView = dynamic(
   () => import("@/components/MapView").then((m) => m.MapView),
   {
@@ -47,10 +35,6 @@ const CommandPalette = dynamic(
   () => import("@/components/CommandPalette").then((m) => m.CommandPalette),
   { ssr: false }
 );
-const HistoryPanel = dynamic(
-  () => import("@/components/HistoryPanel").then((m) => m.HistoryPanel),
-  { ssr: false }
-);
 import type { AvailabilityFilter } from "@/types";
 import type { Sport, CityId } from "@/lib/constants";
 
@@ -72,9 +56,6 @@ export default function Home() {
   const { courts: rawCourts, fetchedAt, loading, error, refresh } = useCourts(sport, city);
   const userLocation = useUserLocation(city);
   const travelTimes = useTravelTimes(rawCourts, userLocation);
-  const auth = useAuth();
-  const { favourites, toggleFavourite } = useFavourites();
-  const { history, addEntry, deleteEntry } = useHistory(auth.authenticated);
 
   // UI state
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -86,9 +67,6 @@ export default function Home() {
   });
   const [viewMode, setViewMode] = useState<"map" | "list">("map");
   const [showSearch, setShowSearch] = useState(false);
-  const [showLogin, setShowLogin] = useState(false);
-  const [showAddHistory, setShowAddHistory] = useState(false);
-  const [showHistory, setShowHistory] = useState(false);
 
   // ⌘K / Ctrl+K shortcut
   useEffect(() => {
@@ -142,7 +120,6 @@ export default function Home() {
         loading={loading}
         hasData={rawCourts.length > 0}
         fetchedAt={fetchedAt}
-        authenticated={auth.authenticated}
         viewMode={viewMode}
         sport={sport}
         city={city}
@@ -152,10 +129,6 @@ export default function Home() {
         onRequestLocation={() => userLocation.requestLocation({ forceFresh: true })}
         onToggleView={() => setViewMode((m) => (m === "map" ? "list" : "map"))}
         onShowSearch={() => setShowSearch(true)}
-        onShowLogin={() => setShowLogin(true)}
-        onShowAddHistory={() => setShowAddHistory(true)}
-        onShowHistory={() => setShowHistory(true)}
-        onLogout={auth.logout}
       />
 
       {/* Loading state */}
@@ -170,7 +143,6 @@ export default function Home() {
           {viewMode === "map" ? (
             <MapView
               courts={courts}
-              favourites={favourites}
               selectedId={selectedId}
               onSelectCourt={setSelectedId}
               travelTimes={travelTimes}
@@ -182,7 +154,6 @@ export default function Home() {
             <LocationList
               courts={courts}
               travelTimes={travelTimes}
-              favourites={favourites}
               onSelectCourt={setSelectedId}
               selectedId={selectedId}
               loading={travelTimes.size === 0 && rawCourts.length > 0}
@@ -196,39 +167,9 @@ export default function Home() {
         <CourtPanel
           location={selectedCourt}
           travelTime={travelTimes.get(selectedCourt.id) ?? null}
-          isFavourite={favourites.has(selectedCourt.id)}
-          authenticated={auth.authenticated}
-          onToggleFavourite={() => toggleFavourite(selectedCourt.id)}
           onClose={() => setSelectedId(null)}
-          matchHistory={history}
           originLat={userLocation.lat}
           originLng={userLocation.lng}
-        />
-      )}
-
-      {/* Dialogs */}
-      {showLogin && (
-        <LoginDialog
-          onLogin={async (pin) => {
-            const ok = await auth.login(pin);
-            if (ok) setShowLogin(false);
-            return ok;
-          }}
-          onClose={() => setShowLogin(false)}
-        />
-      )}
-      {showAddHistory && (
-        <AddHistoryDialog
-          locations={rawCourts}
-          onAdd={addEntry}
-          onClose={() => setShowAddHistory(false)}
-        />
-      )}
-      {showHistory && (
-        <HistoryPanel
-          history={history}
-          onDelete={deleteEntry}
-          onClose={() => setShowHistory(false)}
         />
       )}
 
@@ -237,7 +178,6 @@ export default function Home() {
         <CommandPalette
           courts={courts}
           travelTimes={travelTimes}
-          favourites={favourites}
           sport={sport}
           city={city}
           filter={filter}

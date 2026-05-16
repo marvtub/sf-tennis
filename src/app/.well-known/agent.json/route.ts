@@ -33,22 +33,7 @@ const agentCard = {
         "Plan a pickleball session in Mountain View this weekend.",
       ],
     },
-    {
-      id: "manage-history",
-      name: "Manage user match history",
-      description:
-        "Use the API-key protected history endpoint only after the user supplies credentials and confirms the mutation.",
-      tags: ["history", "automation", "api-key"],
-      examples: ["Log my match at Dolores Park after I provide my API key."],
-    },
   ],
-  securitySchemes: {
-    bearerApiKey: {
-      type: "http",
-      scheme: "bearer",
-      description: "Required only for /api/history/external.",
-    },
-  },
 };
 
 export function GET() {

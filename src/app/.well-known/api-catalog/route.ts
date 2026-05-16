@@ -20,14 +20,6 @@ const catalog = {
       "service-doc": [{ href: `${SITE_URL}/docs`, type: "text/html" }],
       status: [{ href: `${SITE_URL}/api/health`, type: "application/json" }],
     },
-    {
-      anchor: `${SITE_URL}/api/history/external`,
-      "service-desc": [
-        { href: `${SITE_URL}/openapi.json`, type: "application/vnd.oai.openapi+json" },
-      ],
-      "service-doc": [{ href: `${SITE_URL}/docs`, type: "text/html" }],
-      status: [{ href: `${SITE_URL}/api/health`, type: "application/json" }],
-    },
   ],
 };
 

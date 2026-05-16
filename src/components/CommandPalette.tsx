@@ -9,7 +9,6 @@ import type { UserLocationStatus } from "@/hooks/useUserLocation";
 interface CommandPaletteProps {
   courts: CourtLocation[];
   travelTimes: Map<string, TravelTime>;
-  favourites: Set<string>;
   sport: Sport;
   city: CityId;
   filter: AvailabilityFilter;
@@ -34,7 +33,6 @@ const TIME_PRESETS: { id: string; label: string; from: string; to: string }[] = 
 export function CommandPalette({
   courts,
   travelTimes,
-  favourites,
   sport,
   city,
   filter,
@@ -206,7 +204,6 @@ export function CommandPalette({
         id: court.id,
         court,
         walkMin: travelTimes.get(court.id)?.walking?.durationMinutes ?? null,
-        isFav: favourites.has(court.id),
       });
     }
 
@@ -214,7 +211,6 @@ export function CommandPalette({
   }, [
     sortedCourts,
     travelTimes,
-    favourites,
     sport,
     city,
     filter,
@@ -376,7 +372,6 @@ export function CommandPalette({
             tab={mobileTab}
             sortedCourts={sortedCourts}
             travelTimes={travelTimes}
-            favourites={favourites}
             sport={sport}
             city={city}
             filter={filter}
@@ -446,7 +441,6 @@ function MobileContent({
   tab,
   sortedCourts,
   travelTimes,
-  favourites,
   sport,
   city,
   filter,
@@ -461,7 +455,6 @@ function MobileContent({
   tab: MobileTab;
   sortedCourts: CourtLocation[];
   travelTimes: Map<string, TravelTime>;
-  favourites: Set<string>;
   sport: Sport;
   city: CityId;
   filter: AvailabilityFilter;
@@ -488,7 +481,6 @@ function MobileContent({
             key={court.id}
             court={court}
             walkMin={travelTimes.get(court.id)?.walking?.durationMinutes ?? null}
-            isFav={favourites.has(court.id)}
             onSelect={() => onSelectCourt(court.id)}
           />
         ))}
@@ -679,12 +671,10 @@ function DesktopItems({
 function MobileCourtRow({
   court,
   walkMin,
-  isFav,
   onSelect,
 }: {
   court: CourtLocation;
   walkMin: number | null;
-  isFav: boolean;
   onSelect: () => void;
 }) {
   return (
@@ -702,10 +692,7 @@ function MobileCourtRow({
         }`}
       />
       <div className="flex-1 min-w-0">
-        <div className="text-base font-medium truncate">
-          {isFav && "⭐ "}
-          {court.name}
-        </div>
+        <div className="text-base font-medium truncate">{court.name}</div>
         <div className="text-xs text-gray-500 truncate">{court.address}</div>
       </div>
       <div className="flex flex-col items-end gap-0.5 flex-shrink-0 text-xs text-gray-500">
@@ -822,7 +809,7 @@ function DesktopCourtRow({
   onSelect: () => void;
   onHover: () => void;
 }) {
-  const { court, walkMin, isFav } = item;
+  const { court, walkMin } = item;
   return (
     <button
       data-idx={idx}
@@ -842,10 +829,7 @@ function DesktopCourtRow({
         }`}
       />
       <div className="flex-1 min-w-0">
-        <div className="text-sm font-medium truncate">
-          {isFav && "⭐ "}
-          {court.name}
-        </div>
+        <div className="text-sm font-medium truncate">{court.name}</div>
         <div className="text-xs text-gray-500 truncate">{court.address}</div>
       </div>
       <div className="flex items-center gap-2 flex-shrink-0 text-xs text-gray-400">
@@ -877,7 +861,6 @@ type PaletteItem =
       id: string;
       court: CourtLocation;
       walkMin: number | null;
-      isFav: boolean;
     };
 
 // ── Helpers ──

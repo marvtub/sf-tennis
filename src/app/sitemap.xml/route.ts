@@ -9,8 +9,6 @@ const paths = [
   { loc: "/docs.md", priority: "0.7" },
   { loc: "/openapi.json", priority: "0.7" },
   { loc: "/.well-known/api-catalog", priority: "0.7" },
-  { loc: "/.well-known/oauth-authorization-server", priority: "0.6" },
-  { loc: "/.well-known/oauth-protected-resource", priority: "0.6" },
   { loc: "/.well-known/agent-skills/index.json", priority: "0.6" },
 ];
 

@@ -6,7 +6,6 @@ import type { CourtLocation } from "@/types";
 interface CourtPinProps {
   location: CourtLocation;
   isSelected: boolean;
-  isFavourite: boolean;
   onClick: () => void;
 }
 
@@ -34,7 +33,6 @@ const STATUS_STYLES = {
 function CourtPinInner({
   location,
   isSelected,
-  isFavourite,
   onClick,
 }: CourtPinProps) {
   const style = STATUS_STYLES[location.availabilityStatus];
@@ -42,7 +40,7 @@ function CourtPinInner({
   return (
     <button
       onClick={onClick}
-      aria-label={`${location.name}: ${style.label}${isFavourite ? " (favourite)" : ""}`}
+      aria-label={`${location.name}: ${style.label}`}
       className={`
         flex items-center justify-center
         w-11 h-11 rounded-full
@@ -54,7 +52,7 @@ function CourtPinInner({
         ${isSelected ? "scale-125 ring-2 ring-white ring-offset-2 ring-offset-transparent" : ""}
       `}
     >
-      <span aria-hidden="true">{isFavourite ? "★" : style.icon}</span>
+      <span aria-hidden="true">{style.icon}</span>
     </button>
   );
 }
@@ -65,7 +63,6 @@ export const CourtPin = memo(CourtPinInner, (prev, next) => {
     prev.location.id === next.location.id &&
     prev.location.availabilityStatus === next.location.availabilityStatus &&
     prev.isSelected === next.isSelected &&
-    prev.isFavourite === next.isFavourite &&
     prev.onClick === next.onClick
   );
 });

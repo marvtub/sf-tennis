@@ -10,7 +10,7 @@ export async function GET() {
         name: "sf-tennis",
         type: "skill-md",
         description:
-          "Use SF Tennis to find public tennis or pickleball court availability, plan sessions, and safely work with the user's match history API.",
+          "Use SF Tennis to find public tennis or pickleball court availability and plan sessions.",
         url: "/.well-known/agent-skills/sf-tennis/SKILL.md",
         digest: await sha256Digest(SKILL_MD),
       },
