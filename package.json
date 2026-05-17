@@ -9,7 +9,9 @@
     "typecheck": "tsc --noEmit",
     "start": "next start",
     "cf:build": "npx @opennextjs/cloudflare build",
+    "precf:dev": "npm run cf:build",
     "cf:dev": "npx wrangler dev",
+    "precf:deploy": "npm run cf:build",
     "cf:deploy": "npx wrangler deploy"
   },
   "keywords": [],
