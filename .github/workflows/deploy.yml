@@ -3,14 +3,35 @@ name: Deploy to Cloudflare Workers
 on:
   push:
     branches: [master]
+    paths:
+      - "package.json"
+      - "package-lock.json"
+      - "next.config.*"
+      - "open-next.config.*"
+      - "postcss.config.*"
+      - "tailwind.config.*"
+      - "tsconfig.json"
+      - "wrangler.json"
+      - "wrangler.toml"
+      - "public/**"
+      - "src/**"
+  workflow_dispatch:
+
+concurrency:
+  group: cloudflare-workers-production
+  cancel-in-progress: true
+
+permissions:
+  contents: read
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: 22
           cache: npm
