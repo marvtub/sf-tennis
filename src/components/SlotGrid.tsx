@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import type { Court, TimeSlot } from "@/types";
 
 interface SlotGridProps {
@@ -22,6 +22,12 @@ export function SlotGrid({ courts }: SlotGridProps) {
   const [selectedDate, setSelectedDate] = useState<string>(
     allDates[0] ?? getTodaySF()
   );
+
+  useEffect(() => {
+    if (!allDates.includes(selectedDate)) {
+      setSelectedDate(allDates[0] ?? getTodaySF());
+    }
+  }, [allDates, selectedDate]);
 
   if (allDates.length === 0) {
     return (
