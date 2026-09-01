@@ -59,13 +59,19 @@ export function useTravelTimes(
       .join("|");
 
     const originParam = `${origin.lat},${origin.lng}`;
+    const controller = new AbortController();
+    let cancelled = false;
 
-    fetch(`/api/directions?locations=${encodeURIComponent(locationsParam)}&origin=${encodeURIComponent(originParam)}`)
+    fetch(`/api/directions?locations=${encodeURIComponent(locationsParam)}&origin=${encodeURIComponent(originParam)}`, {
+      signal: controller.signal,
+    })
       .then((res) => {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         return res.json();
       })
       .then((data: { travelTimes: TravelTime[] }) => {
+        if (cancelled) return;
+
         const map = new Map(data.travelTimes.map((t) => [t.locationId, t]));
         setTravelTimes(map);
 
@@ -83,8 +89,14 @@ export function useTravelTimes(
         }
       })
       .catch((err) => {
+        if (cancelled) return;
         console.error("Failed to fetch travel times:", err);
       });
+
+    return () => {
+      cancelled = true;
+      controller.abort();
+    };
   }, [courts, origin.lat, origin.lng]);
 
   return travelTimes;
