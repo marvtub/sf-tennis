@@ -4,6 +4,7 @@ on:
   push:
     branches: [master]
     paths:
+      - ".github/workflows/deploy.yml"
       - "package.json"
       - "package-lock.json"
       - "next.config.*"
