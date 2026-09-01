@@ -113,7 +113,12 @@ const openapi = {
     schemas: {
       HealthResponse: {
         type: "object",
-        properties: { ok: { type: "boolean" } },
+        required: ["status", "timestamp", "runtime"],
+        properties: {
+          status: { type: "string", enum: ["ok"] },
+          timestamp: { type: "string", format: "date-time" },
+          runtime: { type: "string", enum: ["edge", "node"] },
+        },
       },
       CourtsResponse: {
         type: "object",
