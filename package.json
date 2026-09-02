@@ -7,6 +7,7 @@
     "dev": "next dev",
     "build": "next build",
     "typecheck": "tsc --noEmit",
+    "test": "vitest run",
     "start": "next start",
     "cf:build": "npx @opennextjs/cloudflare build",
     "precf:dev": "npm run cf:build",
@@ -33,6 +34,7 @@
     "postcss": "^8.5.8",
     "tailwindcss": "^4.2.2",
     "typescript": "^6.0.2",
+    "vitest": "^4.1.11",
     "wrangler": "^4.78.0"
   }
 }
