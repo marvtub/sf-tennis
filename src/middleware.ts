@@ -85,11 +85,6 @@ export function middleware(request: NextRequest) {
   const limit = isApi ? RATE_LIMIT_MAX_REQUESTS : MAP_LOAD_LIMIT;
   const key = `${ip}:${isApi ? "api" : "page"}`;
 
-  if (acceptsMarkdown(request)) {
-    if (isPage) return markdownResponse(HOME_MARKDOWN);
-    if (isDocs) return markdownResponse(DOCS_MARKDOWN);
-  }
-
   const now = Date.now();
   const entry = rateLimitMap.get(key);
 
@@ -118,6 +113,11 @@ export function middleware(request: NextRequest) {
     for (const [k, v] of rateLimitMap.entries()) {
       if (now > v.resetAt) rateLimitMap.delete(k);
     }
+  }
+
+  if (acceptsMarkdown(request)) {
+    if (isPage) return markdownResponse(HOME_MARKDOWN);
+    if (isDocs) return markdownResponse(DOCS_MARKDOWN);
   }
 
   const response = applySecurityHeaders(NextResponse.next());
