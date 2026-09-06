@@ -54,24 +54,24 @@ export async function fetchAllCourts(orgSlug?: string): Promise<CourtLocation[]>
     const batch = allCourts.slice(i, i + BATCH_SIZE);
     const results = await Promise.all(
       batch.map(async ({ courtId }) => {
-        try {
-          const url = `${RECUS_API_BASE}/v1/sites/${courtId}/availability?startDate=${startDate}&endDate=${endDate}`;
-          const res = await fetch(url, { headers: RECUS_HEADERS });
-          if (!res.ok) return { courtId, slots: [] as string[] };
-
-          const data = await res.json();
-          const slots: string[] = [];
-
-          // data.data is { "2026-03-30": { "13:30:00": { availableDurationsMinutes: [...] } } }
-          for (const [date, times] of Object.entries(data.data || {})) {
-            for (const time of Object.keys(times as Record<string, unknown>)) {
-              slots.push(`${date} ${time.slice(0, 5)}`);
-            }
-          }
-          return { courtId, slots: slots.sort() };
-        } catch {
-          return { courtId, slots: [] as string[] };
+        const url = `${RECUS_API_BASE}/v1/sites/${courtId}/availability?startDate=${startDate}&endDate=${endDate}`;
+        const res = await fetch(url, { headers: RECUS_HEADERS });
+        if (!res.ok) {
+          throw new Error(
+            `rec.us per-site API error for court ${courtId}: ${res.status} ${res.statusText}`
+          );
         }
+
+        const data = await res.json();
+        const slots: string[] = [];
+
+        // data.data is { "2026-03-30": { "13:30:00": { availableDurationsMinutes: [...] } } }
+        for (const [date, times] of Object.entries(data.data || {})) {
+          for (const time of Object.keys(times as Record<string, unknown>)) {
+            slots.push(`${date} ${time.slice(0, 5)}`);
+          }
+        }
+        return { courtId, slots: slots.sort() };
       })
     );
 
@@ -97,7 +97,10 @@ function transformLocation(
 
   const courts: Court[] = loc.courts.map((c) => {
     // Use per-site availability (accurate) instead of bulk availableSlots
-    const realSlots = siteAvailability.get(c.id) || [];
+    const realSlots = siteAvailability.get(c.id);
+    if (!realSlots) {
+      throw new Error(`Missing per-site availability for court ${c.id}`);
+    }
 
     const slots: TimeSlot[] = realSlots.map((s) => ({
       datetime: s,
