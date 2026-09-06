@@ -33,7 +33,6 @@ small public API surface for users, agents, and scripts.
 | Agent guide | [`/llms.txt`](https://tennis.marvinaziz.de/llms.txt) | Compact integration starting point |
 | OpenAPI | [`/openapi.json`](https://tennis.marvinaziz.de/openapi.json) | Machine-readable API contract |
 | API catalog | [`/.well-known/api-catalog`](https://tennis.marvinaziz.de/.well-known/api-catalog) | RFC 9727 linkset discovery |
-| Agent card | [`/.well-known/agent.json`](https://tennis.marvinaziz.de/.well-known/agent.json) | Capability metadata |
 | Agent skills | [`/.well-known/agent-skills/index.json`](https://tennis.marvinaziz.de/.well-known/agent-skills/index.json) | Skill discovery |
 
 The homepage and docs also support Markdown content negotiation:

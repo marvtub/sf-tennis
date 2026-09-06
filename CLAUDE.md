@@ -43,8 +43,7 @@ commands that are not in `package.json`.
 - `/docs` - documentation page.
 - `/docs.md`, `/llms.txt`, `/llm.txt` - text documentation for agents/tools.
 - `/openapi.json` - OpenAPI 3.1 contract.
-- `/.well-known/api-catalog`, `/.well-known/agent.json`,
-  `/.well-known/agent-card.json`, `/.well-known/agent-skills/index.json`, and
+- `/.well-known/api-catalog`, `/.well-known/agent-skills/index.json`, and
   `/.well-known/agent-skills/sf-tennis/SKILL.md` - discovery metadata.
 - `/api/courts`, `/api/directions`, `/api/health` - public API routes.
 
