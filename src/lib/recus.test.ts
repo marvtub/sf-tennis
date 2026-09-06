@@ -37,6 +37,7 @@ function bulkResponse(courtIds: string[]) {
 }
 
 afterEach(() => {
+  vi.useRealTimers();
   vi.unstubAllGlobals();
 });
 
@@ -70,4 +71,27 @@ describe("fetchAllCourts", () => {
       "rec.us per-site API error for court court-failed"
     );
   });
+
+  it.each([
+    ["spring forward", "2026-03-08T07:30:00Z", "2026-03-07", "2026-03-14"],
+    ["fall back", "2026-11-01T07:30:00Z", "2026-11-01", "2026-11-08"],
+  ])(
+    "requests seven Los Angeles calendar days across %s",
+    async (_transition, now, expectedStart, expectedEnd) => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date(now));
+
+      const fetchMock = vi
+        .fn()
+        .mockResolvedValueOnce(jsonResponse(bulkResponse(["court-1"])))
+        .mockResolvedValueOnce(jsonResponse({ data: {} }));
+      vi.stubGlobal("fetch", fetchMock);
+
+      await fetchAllCourts("test-organization");
+
+      const availabilityUrl = new URL(String(fetchMock.mock.calls[1][0]));
+      expect(availabilityUrl.searchParams.get("startDate")).toBe(expectedStart);
+      expect(availabilityUrl.searchParams.get("endDate")).toBe(expectedEnd);
+    }
+  );
 });
