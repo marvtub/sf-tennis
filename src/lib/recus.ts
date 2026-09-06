@@ -35,7 +35,7 @@ export async function fetchAllCourts(orgSlug?: string): Promise<CourtLocation[]>
   // Step 2: Fetch per-site availability for ALL courts in parallel
   const now = new Date();
   const startDate = toSFDate(now);
-  const endDate = toSFDate(new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000));
+  const endDate = addCalendarDays(startDate, 7);
 
   // Collect all court IDs
   const allCourts: { courtId: string; locationIndex: number; courtIndex: number }[] = [];
@@ -157,4 +157,11 @@ function transformLocation(
 /** Get date string in SF timezone: "2026-03-30" */
 function toSFDate(date: Date): string {
   return date.toLocaleDateString("en-CA", { timeZone: "America/Los_Angeles" });
+}
+
+function addCalendarDays(date: string, days: number): string {
+  const [year, month, day] = date.split("-").map(Number);
+  return new Date(Date.UTC(year, month - 1, day + days))
+    .toISOString()
+    .slice(0, 10);
 }
