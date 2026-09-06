@@ -20,13 +20,6 @@ export const metadata: Metadata = {
   authors: [{ name: "Marvin Aziz", url: "https://marvinaziz.de" }],
   creator: "Marvin Aziz",
   publisher: "Marvin Aziz",
-  alternates: {
-    canonical: "/",
-    types: {
-      "text/markdown": "/llms.txt",
-      "application/vnd.oai.openapi+json": "/openapi.json",
-    },
-  },
   openGraph: {
     type: "website",
     url: SITE_URL,
@@ -91,7 +84,6 @@ export default function RootLayout({
         <link rel="preconnect" href="https://api.rec.us" crossOrigin="" />
         <link rel="dns-prefetch" href="https://www.google.com" />
         <link rel="help" href="/docs" />
-        <link rel="alternate" type="text/markdown" href="/llms.txt" />
         <link
           rel="service-desc"
           type="application/vnd.oai.openapi+json"
