@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { CITIES, DEFAULT_CITY, DIRECTIONS_CACHE_SECONDS } from "@/lib/constants";
 import type { TravelTime } from "@/types";
 
+// Each location makes two parallel calls, keeping the total in flight at six.
+const DIRECTIONS_LOCATION_CONCURRENCY = 3;
+
 /**
  * GET /api/directions?locations=id1:lat1,lng1|id2:lat2,lng2&origin=lat,lng
  *
@@ -58,8 +61,10 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const results: TravelTime[] = await Promise.all(
-    locations.map(async (loc) => {
+  const results = await mapWithConcurrency(
+    locations,
+    DIRECTIONS_LOCATION_CONCURRENCY,
+    async (loc): Promise<TravelTime> => {
       const transitUrl = `https://www.google.com/maps/dir/?api=1&origin=${originLat},${originLng}&destination=${loc.lat},${loc.lng}&travelmode=transit`;
 
       const [walking, driving] = await Promise.all([
@@ -73,7 +78,7 @@ export async function GET(request: NextRequest) {
         driving,
         transitUrl,
       };
-    })
+    }
   );
 
   return NextResponse.json(
@@ -84,6 +89,28 @@ export async function GET(request: NextRequest) {
       },
     }
   );
+}
+
+async function mapWithConcurrency<T, R>(
+  items: T[],
+  concurrency: number,
+  mapper: (item: T) => Promise<R>
+): Promise<R[]> {
+  const results = new Array<R>(items.length);
+  let nextIndex = 0;
+
+  async function worker() {
+    while (nextIndex < items.length) {
+      const index = nextIndex++;
+      results[index] = await mapper(items[index]);
+    }
+  }
+
+  await Promise.all(
+    Array.from({ length: Math.min(concurrency, items.length) }, () => worker())
+  );
+
+  return results;
 }
 
 async function fetchMapboxDirections(
