@@ -56,8 +56,51 @@ function applyDiscoveryHeaders(res: NextResponse): NextResponse {
   return res;
 }
 
+function splitHeaderValue(value: string, delimiter: string): string[] {
+  const parts: string[] = [];
+  let start = 0;
+  let inQuotes = false;
+  let escaped = false;
+
+  for (let index = 0; index < value.length; index++) {
+    const character = value[index];
+
+    if (escaped) {
+      escaped = false;
+    } else if (inQuotes && character === "\\") {
+      escaped = true;
+    } else if (character === '"') {
+      inQuotes = !inQuotes;
+    } else if (!inQuotes && character === delimiter) {
+      parts.push(value.slice(start, index));
+      start = index + 1;
+    }
+  }
+
+  parts.push(value.slice(start));
+  return parts;
+}
+
 function acceptsMarkdown(request: NextRequest): boolean {
-  return request.headers.get("accept")?.includes("text/markdown") ?? false;
+  const accept = request.headers.get("accept");
+  if (!accept) return false;
+
+  return splitHeaderValue(accept, ",").some((mediaRange) => {
+    const [type, ...parameters] = splitHeaderValue(mediaRange, ";");
+    if (type.trim().toLowerCase() !== "text/markdown") return false;
+
+    const qualityParameter = parameters.find((parameter) => {
+      const separator = parameter.indexOf("=");
+      return separator !== -1 &&
+        parameter.slice(0, separator).trim().toLowerCase() === "q";
+    });
+
+    if (!qualityParameter) return true;
+
+    const separator = qualityParameter.indexOf("=");
+    const quality = Number(qualityParameter.slice(separator + 1).trim());
+    return Number.isFinite(quality) && quality > 0;
+  });
 }
 
 function markdownResponse(markdown: string): NextResponse {
