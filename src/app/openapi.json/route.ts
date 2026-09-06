@@ -66,7 +66,8 @@ const openapi = {
             },
           },
           "502": {
-            description: "Upstream availability failed.",
+            description:
+              "An upstream availability request failed; no partial availability is returned.",
           },
         },
       },
