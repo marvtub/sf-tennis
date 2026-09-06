@@ -1,0 +1,198 @@
+"use client";
+
+import { useState, useMemo, useEffect, useCallback } from "react";
+import dynamic from "next/dynamic";
+import { useCourts } from "@/hooks/useCourts";
+import { useTravelTimes } from "@/hooks/useTravelTimes";
+import { useUserLocation } from "@/hooks/useUserLocation";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { TopBar } from "@/components/TopBar";
+import { LoadingSkeleton } from "@/components/LoadingSkeleton";
+import { ErrorBanner } from "@/components/ErrorBanner";
+import { WebMcpBridge } from "@/components/WebMcpBridge";
+import { applyFilter, getAvailableDates } from "@/lib/filter";
+
+const MapView = dynamic(
+  () => import("@/components/MapView").then((m) => m.MapView),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="flex h-full w-full items-center justify-center bg-gray-100 text-sm text-gray-500">
+        Loading map...
+      </div>
+    ),
+  }
+);
+const LocationList = dynamic(
+  () => import("@/components/LocationList").then((m) => m.LocationList),
+  { ssr: false }
+);
+const CourtPanel = dynamic(
+  () => import("@/components/CourtPanel").then((m) => m.CourtPanel),
+  { ssr: false }
+);
+const CommandPalette = dynamic(
+  () => import("@/components/CommandPalette").then((m) => m.CommandPalette),
+  { ssr: false }
+);
+import type { AvailabilityFilter } from "@/types";
+import type { Sport, CityId } from "@/lib/constants";
+
+export default function HomePage() {
+  // City + Sport — clear selection when switching
+  const [city, setCity] = useState<CityId>("sf");
+  const [sport, setSport] = useState<Sport>("tennis");
+
+  const handleCityChange = useCallback((c: CityId) => {
+    setCity(c);
+    setSelectedId(null);
+  }, []);
+  const handleSportChange = useCallback((s: Sport) => {
+    setSport(s);
+    setSelectedId(null);
+  }, []);
+
+  // Data hooks
+  const { courts: rawCourts, fetchedAt, loading, error, refresh } = useCourts(sport, city);
+  const userLocation = useUserLocation(city);
+  const travelTimes = useTravelTimes(rawCourts, userLocation);
+
+  // UI state
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [filter, setFilter] = useState<AvailabilityFilter>({
+    date: null,
+    weekendOnly: false,
+    timeFrom: null,
+    timeTo: null,
+  });
+  const [viewMode, setViewMode] = useState<"map" | "list">("map");
+  const [showSearch, setShowSearch] = useState(false);
+
+  // ⌘K / Ctrl+K shortcut
+  useEffect(() => {
+    function handleKey(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+        e.preventDefault();
+        setShowSearch((s) => !s);
+      }
+    }
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, []);
+
+  // Derived data
+  const mapboxToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN ?? "";
+  const availableDates = useMemo(
+    () => getAvailableDates(rawCourts),
+    [rawCourts]
+  );
+  const courts = useMemo(
+    () => applyFilter(rawCourts, filter),
+    [rawCourts, filter]
+  );
+  const selectedCourt = courts.find((c) => c.id === selectedId) ?? null;
+
+  if (!mapboxToken) {
+    return (
+      <main className="flex min-h-screen items-center justify-center">
+        <div className="text-center p-8">
+          <h1 className="text-2xl font-bold mb-4">🎾 Court Finder</h1>
+          <p className="text-red-600">
+            Missing NEXT_PUBLIC_MAPBOX_TOKEN environment variable.
+          </p>
+        </div>
+      </main>
+    );
+  }
+
+  return (
+    <main className="relative h-screen w-screen overflow-hidden">
+      <WebMcpBridge />
+      <div className="sr-only">
+        <h1>SF Tennis live public court availability</h1>
+        <p>
+          Find real-time tennis and pickleball court availability in San
+          Francisco and Mountain View. Developers can use /llms.txt, /docs.md,
+          and /openapi.json for machine-readable instructions and API access.
+        </p>
+      </div>
+      <TopBar
+        loading={loading}
+        hasData={rawCourts.length > 0}
+        fetchedAt={fetchedAt}
+        viewMode={viewMode}
+        sport={sport}
+        city={city}
+        courtCount={courts.length}
+        userLocationStatus={userLocation.status}
+        onRefresh={refresh}
+        onRequestLocation={() => userLocation.requestLocation({ forceFresh: true })}
+        onToggleView={() => setViewMode((m) => (m === "map" ? "list" : "map"))}
+        onShowSearch={() => setShowSearch(true)}
+      />
+
+      {/* Loading state */}
+      {loading && rawCourts.length === 0 && <LoadingSkeleton />}
+
+      {/* Error banner */}
+      {error && <ErrorBanner message={error} onRetry={refresh} />}
+
+      {/* Main content — single row top bar = 48px */}
+      <div className="absolute inset-0 pt-12">
+        <ErrorBoundary>
+          {viewMode === "map" ? (
+            <MapView
+              courts={courts}
+              selectedId={selectedId}
+              onSelectCourt={setSelectedId}
+              travelTimes={travelTimes}
+              mapboxToken={mapboxToken}
+              userLocation={userLocation}
+              city={city}
+            />
+          ) : (
+            <LocationList
+              courts={courts}
+              travelTimes={travelTimes}
+              onSelectCourt={setSelectedId}
+              selectedId={selectedId}
+              loading={travelTimes.size === 0 && rawCourts.length > 0}
+            />
+          )}
+        </ErrorBoundary>
+      </div>
+
+      {/* Court detail panel */}
+      {selectedCourt && (
+        <CourtPanel
+          location={selectedCourt}
+          travelTime={travelTimes.get(selectedCourt.id) ?? null}
+          onClose={() => setSelectedId(null)}
+          originLat={userLocation.lat}
+          originLng={userLocation.lng}
+        />
+      )}
+
+      {/* ⌘K Command Palette */}
+      {showSearch && (
+        <CommandPalette
+          courts={courts}
+          travelTimes={travelTimes}
+          sport={sport}
+          city={city}
+          filter={filter}
+          availableDates={availableDates}
+          onSelectCourt={(id) => {
+            setSelectedId(id);
+          }}
+          onSportChange={handleSportChange}
+          onCityChange={handleCityChange}
+          onFilterChange={setFilter}
+          onRequestLocation={() => userLocation.requestLocation({ forceFresh: true })}
+          userLocationStatus={userLocation.status}
+          onClose={() => setShowSearch(false)}
+        />
+      )}
+    </main>
+  );
+}

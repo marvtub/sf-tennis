@@ -14,7 +14,6 @@ export const DISCOVERY_LINK_HEADER = [
   '</openapi.json>; rel="service-desc"; type="application/vnd.oai.openapi+json"',
   '</.well-known/api-catalog>; rel="api-catalog"; type="application/linkset+json"',
   '</.well-known/agent-skills/index.json>; rel="agent-skills"; type="application/json"',
-  '</.well-known/agent.json>; rel="agent-card"; type="application/json"',
 ].join(", ");
 
 export const HOME_MARKDOWN = `# SF Tennis
@@ -127,7 +126,6 @@ Last updated: ${LAST_UPDATED}
 - OpenAPI: ${SITE_URL}/openapi.json
 - API catalog: ${SITE_URL}/.well-known/api-catalog
 - Skill discovery: ${SITE_URL}/.well-known/agent-skills/index.json
-- Capability card: ${SITE_URL}/.well-known/agent.json
 - GitHub: ${GITHUB_URL}
 - Project page: ${PROJECT_URL}
 
