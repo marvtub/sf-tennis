@@ -79,7 +79,13 @@ Required in `.env.local` for development and as Worker secrets in production:
 
 ## Verification
 
-For ordinary code changes, run:
+After a fresh `npm ci`, install Chromium before running the docs tests:
+
+```bash
+npx playwright install --with-deps chromium
+```
+
+Then, for ordinary code changes, run:
 
 ```bash
 npm test
