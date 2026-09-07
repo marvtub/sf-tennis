@@ -94,6 +94,7 @@ Required environment variables:
 | Command | Description |
 | --- | --- |
 | `npm run dev` | Start the Next.js dev server |
+| `npm run test` | Run the Vitest test suite once |
 | `npm run typecheck` | Run TypeScript without building |
 | `npm run build` | Build the production Next.js app |
 | `npm run cf:build` | Build the Cloudflare Worker bundle in `.open-next/` |
