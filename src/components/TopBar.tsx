@@ -104,7 +104,10 @@ export function TopBar({
 
           <button
             onClick={onRequestLocation}
-            disabled={userLocationStatus === "requesting"}
+            disabled={
+              userLocationStatus === "requesting" ||
+              userLocationStatus === "unsupported"
+            }
             aria-label={locationLabel}
             title={locationLabel}
             className={`px-2 py-1 text-xs rounded transition-colors disabled:opacity-50 ${
