@@ -123,6 +123,7 @@ const openapi = {
       },
       CourtsResponse: {
         type: "object",
+        required: ["sport", "city", "fetchedAt", "courts"],
         properties: {
           sport: { type: "string", enum: ["tennis", "pickleball"] },
           city: { type: "string", enum: ["sf", "mountain-view"] },
@@ -135,6 +136,17 @@ const openapi = {
       },
       Location: {
         type: "object",
+        required: [
+          "id",
+          "name",
+          "lat",
+          "lng",
+          "address",
+          "courts",
+          "totalSlotsToday",
+          "totalSlotsWeek",
+          "availabilityStatus",
+        ],
         properties: {
           id: { type: "string" },
           name: { type: "string" },
@@ -155,6 +167,7 @@ const openapi = {
       },
       Court: {
         type: "object",
+        required: ["id", "sportId", "availableSlots"],
         properties: {
           id: { type: "string" },
           name: { type: "string" },
@@ -167,21 +180,27 @@ const openapi = {
       },
       Slot: {
         type: "object",
+        required: ["date", "weather"],
         properties: {
           date: { type: "string" },
           startTime: { type: "string" },
           endTime: { type: "string" },
           price: { type: "number" },
-          weather: { type: "object", additionalProperties: true },
+          weather: {
+            type: ["object", "null"],
+            additionalProperties: true,
+          },
         },
       },
       DirectionsResponse: {
         type: "object",
+        required: ["travelTimes"],
         properties: {
           travelTimes: {
             type: "array",
             items: {
               type: "object",
+              required: ["locationId", "walking", "driving", "transitUrl"],
               properties: {
                 locationId: { type: "string" },
                 walking: { $ref: "#/components/schemas/TravelMode" },
@@ -194,6 +213,7 @@ const openapi = {
       },
       TravelMode: {
         type: ["object", "null"],
+        required: ["durationMinutes", "distanceMeters"],
         properties: {
           durationMinutes: { type: "number" },
           distanceMeters: { type: "number" },
