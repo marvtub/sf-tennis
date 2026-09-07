@@ -17,13 +17,15 @@ the user explicitly asks for a new private feature.
 
 - `npm run dev` - Next.js dev server. It calls real rec.us and Mapbox APIs.
 - `npm run typecheck` - TypeScript check without a production bundle.
+- `npm test` - Vitest unit tests followed by the Playwright docs smoke tests.
+- `npm run test:docs` - Playwright docs smoke tests at desktop and mobile sizes.
 - `npm run build` - Next.js production build.
 - `npm run cf:build` - Build the Cloudflare Workers bundle in `.open-next/`.
 - `npm run cf:dev` - Run the built Worker locally with Wrangler.
 - `npm run cf:deploy` - Deploy to Cloudflare Workers.
 
-There is no test suite, no linter config, and no formatter. Do not invent
-commands that are not in `package.json`.
+There is no linter config or formatter. Do not invent commands that are not in
+`package.json`.
 
 ## Architecture
 
@@ -80,6 +82,7 @@ Required in `.env.local` for development and as Worker secrets in production:
 For ordinary code changes, run:
 
 ```bash
+npm test
 npm run typecheck
 npm run build
 ```

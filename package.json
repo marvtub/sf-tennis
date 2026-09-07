@@ -7,7 +7,9 @@
     "dev": "next dev",
     "build": "next build",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run",
+    "test": "npm run test:unit && npm run test:docs",
+    "test:unit": "vitest run",
+    "test:docs": "playwright test",
     "start": "next start",
     "cf:build": "npx @opennextjs/cloudflare build",
     "precf:dev": "npm run cf:build",
@@ -28,6 +30,7 @@
   },
   "devDependencies": {
     "@opennextjs/cloudflare": "^1.18.0",
+    "@playwright/test": "^1.63.0",
     "@tailwindcss/postcss": "^4.2.2",
     "@types/node": "^25.5.0",
     "@types/react": "^19.2.14",
