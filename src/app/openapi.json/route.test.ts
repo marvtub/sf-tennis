@@ -1,3 +1,4 @@
+import { compileErrors, validate } from "@readme/openapi-parser";
 import { describe, expect, it } from "vitest";
 
 import { GET } from "./route";
@@ -71,5 +72,9 @@ describe("GET /openapi.json", () => {
     for (const reference of localRefs) {
       expect(resolveLocalRef(document, reference), reference).toBeDefined();
     }
+
+    const validation = await validate(document);
+
+    expect(validation.valid, compileErrors(validation)).toBe(true);
   });
 });
