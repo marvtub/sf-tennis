@@ -55,6 +55,8 @@ describe("GET /api/directions", () => {
     ["a string distance", { duration: 600, distance: "1000" }],
     ["a non-finite duration", { duration: Number.NaN, distance: 1_000 }],
     ["a non-finite distance", { duration: 600, distance: Number.POSITIVE_INFINITY }],
+    ["a negative duration", { duration: -1, distance: 1_000 }],
+    ["a negative distance", { duration: 600, distance: -1 }],
   ])("returns no route for %s", async (_description, route) => {
     vi.stubEnv("MAPBOX_SECRET_TOKEN", "test-token");
     vi.stubGlobal("fetch", vi.fn(async () => ({
