@@ -48,6 +48,11 @@ describe("GET /api/directions", () => {
   });
 
   it.each([
+    "",
+    ",",
+    "0,",
+    ",0",
+    "0,0,extra",
     "91,0",
     "-91,0",
     "0,181",
@@ -70,6 +75,11 @@ describe("GET /api/directions", () => {
   });
 
   it.each([
+    "court:",
+    "court:,",
+    "court:0,",
+    "court:,0",
+    "court:0,0,extra",
     "court:91,0",
     "court:-91,0",
     "court:0,181",

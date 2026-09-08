@@ -16,6 +16,19 @@ function isValidCoordinatePair(lat: number, lng: number): boolean {
   );
 }
 
+function parseCoordinatePair(value: string): { lat: number; lng: number } | null {
+  const components = value.split(",");
+  if (
+    components.length !== 2 ||
+    components.some((component) => component.trim() === "")
+  ) {
+    return null;
+  }
+
+  const [lat, lng] = components.map(Number);
+  return isValidCoordinatePair(lat, lng) ? { lat, lng } : null;
+}
+
 /**
  * GET /api/directions?locations=id1:lat1,lng1|id2:lat2,lng2&origin=lat,lng
  *
@@ -38,15 +51,15 @@ export async function GET(request: NextRequest) {
   let originLat = defaultCity.lat;
   let originLng = defaultCity.lng;
   if (originParam !== null) {
-    const [lat, lng] = originParam.split(",").map(Number);
-    if (!isValidCoordinatePair(lat, lng)) {
+    const origin = parseCoordinatePair(originParam);
+    if (!origin) {
       return NextResponse.json(
         { error: "Invalid 'origin' parameter" },
         { status: 400 }
       );
     }
-    originLat = lat;
-    originLng = lng;
+    originLat = origin.lat;
+    originLng = origin.lng;
   }
 
   const mapboxToken = process.env.MAPBOX_SECRET_TOKEN;
@@ -64,9 +77,9 @@ export async function GET(request: NextRequest) {
   const locations = rawEntries.map((entry) => {
     const [id, coords] = entry.split(":");
     if (!coords) return null;
-    const [lat, lng] = coords.split(",").map(Number);
-    if (!isValidCoordinatePair(lat, lng)) return null;
-    return { id, lat, lng };
+    const coordinates = parseCoordinatePair(coords);
+    if (!coordinates) return null;
+    return { id, ...coordinates };
   }).filter((loc): loc is { id: string; lat: number; lng: number } => loc !== null);
 
   if (locations.length === 0) {
