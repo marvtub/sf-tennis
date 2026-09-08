@@ -2,6 +2,16 @@
 
 import { useState, useEffect } from "react";
 
+export function formatTimeSince(isoString: string, now = Date.now()) {
+  const timestamp = Date.parse(isoString);
+  if (!Number.isFinite(timestamp)) return "recently";
+
+  const seconds = Math.max(0, Math.round((now - timestamp) / 1000));
+  if (seconds < 60) return `${seconds}s ago`;
+  if (seconds < 3600) return `${Math.round(seconds / 60)}m ago`;
+  return `${Math.round(seconds / 3600)}h ago`;
+}
+
 export function TimeSince({ isoString }: { isoString: string }) {
   const [, setTick] = useState(0);
 
@@ -10,13 +20,7 @@ export function TimeSince({ isoString }: { isoString: string }) {
     return () => clearInterval(interval);
   }, []);
 
-  const seconds = Math.round(
-    (Date.now() - new Date(isoString).getTime()) / 1000
-  );
-  let label: string;
-  if (seconds < 60) label = `${seconds}s ago`;
-  else if (seconds < 3600) label = `${Math.round(seconds / 60)}m ago`;
-  else label = `${Math.round(seconds / 3600)}h ago`;
+  const label = formatTimeSince(isoString);
 
   return <span className="text-gray-500">Updated {label}</span>;
 }

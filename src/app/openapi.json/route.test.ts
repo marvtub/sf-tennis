@@ -3,31 +3,37 @@ import { describe, expect, it } from "vitest";
 
 import { GET } from "./route";
 
-function collectLocalRefs(value: unknown): string[] {
+function collectLocalReferences(value: unknown): string[] {
   if (Array.isArray(value)) {
-    return value.flatMap(collectLocalRefs);
+    return value.flatMap(collectLocalReferences);
   }
 
-  if (typeof value !== "object" || value === null) {
+  if (value === null || typeof value !== "object") {
     return [];
   }
 
-  return Object.entries(value).flatMap(([key, child]) => {
-    if (key === "$ref" && typeof child === "string" && child.startsWith("#/")) {
-      return [child];
+  return Object.entries(value).flatMap(([key, nestedValue]) => {
+    if (
+      key === "$ref" &&
+      typeof nestedValue === "string" &&
+      nestedValue.startsWith("#/")
+    ) {
+      return [nestedValue];
     }
 
-    return collectLocalRefs(child);
+    return collectLocalReferences(nestedValue);
   });
 }
 
-function resolveLocalRef(document: unknown, reference: string): unknown {
+function resolveLocalReference(document: unknown, reference: string): unknown {
   return reference
     .slice(2)
     .split("/")
-    .map((segment) => segment.replaceAll("~1", "/").replaceAll("~0", "~"))
+    .map((segment) =>
+      decodeURIComponent(segment).replaceAll("~1", "/").replaceAll("~0", "~"),
+    )
     .reduce<unknown>((value, segment) => {
-      if (typeof value !== "object" || value === null) {
+      if (value === null || typeof value !== "object" || !(segment in value)) {
         return undefined;
       }
 
@@ -36,8 +42,9 @@ function resolveLocalRef(document: unknown, reference: string): unknown {
 }
 
 describe("GET /openapi.json", () => {
-  it("serves the published OpenAPI contract", async () => {
+  it("publishes a valid, resolvable API contract with its cache policy", async () => {
     const response = GET();
+    const document = await response.json();
 
     expect(response.status).toBe(200);
     expect(response.headers.get("Content-Type")).toBe(
@@ -46,35 +53,69 @@ describe("GET /openapi.json", () => {
     expect(response.headers.get("Cache-Control")).toBe(
       "public, max-age=3600, s-maxage=86400",
     );
-
-    const document = await response.json();
-
-    expect(document).toMatchObject({
-      openapi: "3.1.0",
-      info: {
-        title: "SF Tennis API",
-        version: "1.0.0",
-      },
-      servers: [{ url: "https://tennis.marvinaziz.de" }],
-      components: {
-        schemas: expect.any(Object),
-      },
+    expect(document.openapi).toBe("3.1.0");
+    expect(document.info).toMatchObject({
+      title: "SF Tennis API",
+      version: "1.0.0",
     });
+    expect(document.servers).toEqual([{ url: "https://tennis.marvinaziz.de" }]);
+    expect(document.components.schemas).toEqual(expect.any(Object));
     expect(Object.keys(document.paths).sort()).toEqual([
       "/api/courts",
       "/api/directions",
       "/api/health",
     ]);
 
-    const localRefs = collectLocalRefs(document);
-
-    expect(localRefs.length).toBeGreaterThan(0);
-    for (const reference of localRefs) {
-      expect(resolveLocalRef(document, reference), reference).toBeDefined();
+    const references = collectLocalReferences(document);
+    expect(references.length).toBeGreaterThan(0);
+    for (const reference of references) {
+      expect(resolveLocalReference(document, reference), reference).toBeDefined();
     }
 
     const validation = await validate(document);
-
     expect(validation.valid, compileErrors(validation)).toBe(true);
+  });
+
+  it("marks guaranteed response fields as required", async () => {
+    const response = GET();
+    const document = await response.json();
+    const schemas = document.components.schemas;
+    const travelTime = schemas.DirectionsResponse.properties.travelTimes.items;
+
+    expect(schemas.CourtsResponse.required).toEqual([
+      "sport",
+      "city",
+      "fetchedAt",
+      "courts",
+    ]);
+    expect(schemas.Location.required).toEqual([
+      "id",
+      "name",
+      "lat",
+      "lng",
+      "address",
+      "courts",
+      "totalSlotsToday",
+      "totalSlotsWeek",
+      "availabilityStatus",
+    ]);
+    expect(schemas.Court.required).toEqual([
+      "id",
+      "sportId",
+      "availableSlots",
+    ]);
+    expect(schemas.Slot.required).toEqual(["date", "weather"]);
+    expect(schemas.Slot.properties.weather.type).toEqual(["object", "null"]);
+    expect(schemas.DirectionsResponse.required).toEqual(["travelTimes"]);
+    expect(travelTime.required).toEqual([
+      "locationId",
+      "walking",
+      "driving",
+      "transitUrl",
+    ]);
+    expect(schemas.TravelMode.required).toEqual([
+      "durationMinutes",
+      "distanceMeters",
+    ]);
   });
 });
