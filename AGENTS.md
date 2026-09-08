@@ -16,7 +16,9 @@ the user explicitly asks for a new private feature.
 ## Commands
 
 - `npm run dev` - Next.js dev server. It calls real rec.us and Mapbox APIs.
-- `npm run test` - Run the Vitest test suite once.
+- `npm test` - Vitest unit tests followed by the Playwright docs smoke tests.
+- `npm run test:unit` - Run the Vitest unit suite once.
+- `npm run test:docs` - Playwright docs smoke tests at desktop and mobile sizes.
 - `npm run typecheck` - TypeScript check without a production bundle.
 - `npm run build` - Next.js production build.
 - `npm run cf:build` - Build the Cloudflare Workers bundle in `.open-next/`.
@@ -78,10 +80,16 @@ Required in `.env.local` for development and as Worker secrets in production:
 
 ## Verification
 
-For ordinary code changes, run:
+After a fresh `npm ci`, install Chromium before running the docs tests:
 
 ```bash
-npm run test
+npx playwright install --with-deps chromium
+```
+
+Then, for ordinary code changes, run:
+
+```bash
+npm test
 npm run typecheck
 npm run build
 ```
