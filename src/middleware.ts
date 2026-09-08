@@ -1,3 +1,4 @@
+import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { NextRequest, NextResponse } from "next/server";
 import {
   DISCOVERY_LINK_HEADER,
@@ -5,12 +6,17 @@ import {
   HOME_MARKDOWN,
 } from "./lib/agent-readiness";
 
-// Simple in-memory rate limiter (per-IP, resets on deploy)
-const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
-
-const RATE_LIMIT_WINDOW_MS = 60 * 1000; // 1 minute
 const RATE_LIMIT_MAX_REQUESTS = 60; // 60 req/min for API routes
 const MAP_LOAD_LIMIT = 100; // 100 page loads per minute (very generous)
+
+interface RateLimitBinding {
+  limit(options: { key: string }): Promise<{ success: boolean }>;
+}
+
+interface RateLimitEnv extends CloudflareEnv {
+  API_RATE_LIMITER: RateLimitBinding;
+  PAGE_RATE_LIMITER: RateLimitBinding;
+}
 
 // ── Security headers ──
 //
@@ -116,7 +122,7 @@ function markdownResponse(markdown: string): NextResponse {
   );
 }
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const ip =
     request.headers.get("cf-connecting-ip") ??
     request.headers.get("x-forwarded-for")?.split(",")[0] ??
@@ -126,36 +132,23 @@ export function middleware(request: NextRequest) {
   const isPage = request.nextUrl.pathname === "/";
   const isDocs = request.nextUrl.pathname === "/docs";
   const limit = isApi ? RATE_LIMIT_MAX_REQUESTS : MAP_LOAD_LIMIT;
-  const key = `${ip}:${isApi ? "api" : "page"}`;
+  const env = getCloudflareContext().env as RateLimitEnv;
+  const rateLimiter = isApi ? env.API_RATE_LIMITER : env.PAGE_RATE_LIMITER;
+  const { success } = await rateLimiter.limit({ key: ip });
 
-  const now = Date.now();
-  const entry = rateLimitMap.get(key);
-
-  if (!entry || now > entry.resetAt) {
-    rateLimitMap.set(key, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS });
-  } else {
-    entry.count++;
-    if (entry.count > limit) {
-      return applySecurityHeaders(
-        NextResponse.json(
-          { error: "Too many requests. Please slow down." },
-          {
-            status: 429,
-            headers: {
-              "Retry-After": "60",
-              "X-RateLimit-Limit": String(limit),
-            },
-          }
-        )
-      );
-    }
-  }
-
-  // Clean up old entries periodically (every 1000 requests)
-  if (Math.random() < 0.001) {
-    for (const [k, v] of rateLimitMap.entries()) {
-      if (now > v.resetAt) rateLimitMap.delete(k);
-    }
+  if (!success) {
+    return applySecurityHeaders(
+      NextResponse.json(
+        { error: "Too many requests. Please slow down." },
+        {
+          status: 429,
+          headers: {
+            "Retry-After": "60",
+            "X-RateLimit-Limit": String(limit),
+          },
+        }
+      )
+    );
   }
 
   if (acceptsMarkdown(request)) {

@@ -8,6 +8,24 @@
     "directory": ".open-next/assets",
     "binding": "ASSETS"
   },
+  "ratelimits": [
+    {
+      "name": "API_RATE_LIMITER",
+      "namespace_id": "814293169",
+      "simple": {
+        "limit": 60,
+        "period": 60
+      }
+    },
+    {
+      "name": "PAGE_RATE_LIMITER",
+      "namespace_id": "264836189",
+      "simple": {
+        "limit": 100,
+        "period": 60
+      }
+    }
+  ],
   "routes": [
     {
       "pattern": "tennis.marvinaziz.de/*",
