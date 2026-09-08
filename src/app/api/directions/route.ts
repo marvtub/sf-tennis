@@ -131,6 +131,9 @@ async function fetchMapboxDirections(
     const data = await res.json();
     const route = data.routes?.[0];
     if (!route) return null;
+    if (!Number.isFinite(route.duration) || !Number.isFinite(route.distance)) {
+      return null;
+    }
 
     return {
       durationMinutes: Math.round(route.duration / 60),

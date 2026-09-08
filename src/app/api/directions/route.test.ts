@@ -46,4 +46,55 @@ describe("GET /api/directions", () => {
     expect(fetchMock).toHaveBeenCalledTimes(100);
     expect(peakInFlight).toBeLessThanOrEqual(6);
   });
+
+  it.each([
+    ["missing metrics", {}],
+    ["a null duration", { duration: null, distance: 1_000 }],
+    ["a null distance", { duration: 600, distance: null }],
+    ["a string duration", { duration: "600", distance: 1_000 }],
+    ["a string distance", { duration: 600, distance: "1000" }],
+    ["a non-finite duration", { duration: Number.NaN, distance: 1_000 }],
+    ["a non-finite distance", { duration: 600, distance: Number.POSITIVE_INFINITY }],
+  ])("returns no route for %s", async (_description, route) => {
+    vi.stubEnv("MAPBOX_SECRET_TOKEN", "test-token");
+    vi.stubGlobal("fetch", vi.fn(async () => ({
+      ok: true,
+      json: async () => ({ routes: [route] }),
+    })));
+
+    const request = new NextRequest(
+      "https://example.com/api/directions?locations=court-1:37.75,-122.45"
+    );
+    const response = await GET(request);
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.travelTimes[0].walking).toBeNull();
+    expect(body.travelTimes[0].driving).toBeNull();
+  });
+
+  it("returns rounded route metrics when both values are finite numbers", async () => {
+    vi.stubEnv("MAPBOX_SECRET_TOKEN", "test-token");
+    vi.stubGlobal("fetch", vi.fn(async () => ({
+      ok: true,
+      json: async () => ({
+        routes: [{ duration: 629.9, distance: 1_000.6 }],
+      }),
+    })));
+
+    const request = new NextRequest(
+      "https://example.com/api/directions?locations=court-1:37.75,-122.45"
+    );
+    const response = await GET(request);
+    const body = await response.json();
+
+    expect(body.travelTimes[0].walking).toEqual({
+      durationMinutes: 10,
+      distanceMeters: 1_001,
+    });
+    expect(body.travelTimes[0].driving).toEqual({
+      durationMinutes: 10,
+      distanceMeters: 1_001,
+    });
+  });
 });
