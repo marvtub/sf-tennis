@@ -5,6 +5,17 @@ import type { TravelTime } from "@/types";
 // Each location makes two parallel calls, keeping the total in flight at six.
 const DIRECTIONS_LOCATION_CONCURRENCY = 3;
 
+function isValidCoordinatePair(lat: number, lng: number): boolean {
+  return (
+    Number.isFinite(lat) &&
+    Number.isFinite(lng) &&
+    lat >= -90 &&
+    lat <= 90 &&
+    lng >= -180 &&
+    lng <= 180
+  );
+}
+
 /**
  * GET /api/directions?locations=id1:lat1,lng1|id2:lat2,lng2&origin=lat,lng
  *
@@ -26,12 +37,16 @@ export async function GET(request: NextRequest) {
   const defaultCity = CITIES[DEFAULT_CITY];
   let originLat = defaultCity.lat;
   let originLng = defaultCity.lng;
-  if (originParam) {
+  if (originParam !== null) {
     const [lat, lng] = originParam.split(",").map(Number);
-    if (Number.isFinite(lat) && Number.isFinite(lng)) {
-      originLat = lat;
-      originLng = lng;
+    if (!isValidCoordinatePair(lat, lng)) {
+      return NextResponse.json(
+        { error: "Invalid 'origin' parameter" },
+        { status: 400 }
+      );
     }
+    originLat = lat;
+    originLng = lng;
   }
 
   const mapboxToken = process.env.MAPBOX_SECRET_TOKEN;
@@ -50,7 +65,7 @@ export async function GET(request: NextRequest) {
     const [id, coords] = entry.split(":");
     if (!coords) return null;
     const [lat, lng] = coords.split(",").map(Number);
-    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+    if (!isValidCoordinatePair(lat, lng)) return null;
     return { id, lat, lng };
   }).filter((loc): loc is { id: string; lat: number; lng: number } => loc !== null);
 

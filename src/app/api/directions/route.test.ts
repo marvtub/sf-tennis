@@ -46,4 +46,71 @@ describe("GET /api/directions", () => {
     expect(fetchMock).toHaveBeenCalledTimes(100);
     expect(peakInFlight).toBeLessThanOrEqual(6);
   });
+
+  it.each([
+    "91,0",
+    "-91,0",
+    "0,181",
+    "0,-181",
+    "NaN,0",
+  ])("rejects an invalid explicit origin without calling Mapbox: %s", async (origin) => {
+    vi.stubEnv("MAPBOX_SECRET_TOKEN", "test-token");
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    const request = new NextRequest(
+      `https://example.com/api/directions?origin=${encodeURIComponent(origin)}&locations=court:37.75,-122.45`
+    );
+
+    const response = await GET(request);
+
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ error: "Invalid 'origin' parameter" });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    "court:91,0",
+    "court:-91,0",
+    "court:0,181",
+    "court:0,-181",
+    "court:NaN,0",
+  ])("rejects an invalid destination without calling Mapbox: %s", async (location) => {
+    vi.stubEnv("MAPBOX_SECRET_TOKEN", "test-token");
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    const request = new NextRequest(
+      `https://example.com/api/directions?locations=${encodeURIComponent(location)}`
+    );
+
+    const response = await GET(request);
+
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ error: "No valid locations" });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("accepts boundary coordinates and valid negative coordinates", async () => {
+    vi.stubEnv("MAPBOX_SECRET_TOKEN", "test-token");
+    const fetchMock = vi.fn(async () =>
+      new Response(
+        JSON.stringify({ routes: [{ duration: 600, distance: 1_000 }] }),
+        { status: 200 }
+      )
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const locations = "boundary:-90,-180|negative:37.75,-122.45";
+    const request = new NextRequest(
+      `https://example.com/api/directions?origin=90,180&locations=${encodeURIComponent(locations)}`
+    );
+
+    const response = await GET(request);
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.travelTimes).toHaveLength(2);
+    expect(fetchMock).toHaveBeenCalledTimes(4);
+  });
 });
