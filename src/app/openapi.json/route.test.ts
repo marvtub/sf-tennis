@@ -1,3 +1,4 @@
+import { compileErrors, validate } from "@readme/openapi-parser";
 import { describe, expect, it } from "vitest";
 
 import { GET } from "./route";
@@ -41,7 +42,7 @@ function resolveLocalReference(document: unknown, reference: string): unknown {
 }
 
 describe("GET /openapi.json", () => {
-  it("publishes a resolvable API contract with its cache policy", async () => {
+  it("publishes a valid, resolvable API contract with its cache policy", async () => {
     const response = GET();
     const document = await response.json();
 
@@ -53,7 +54,12 @@ describe("GET /openapi.json", () => {
       "public, max-age=3600, s-maxage=86400",
     );
     expect(document.openapi).toBe("3.1.0");
+    expect(document.info).toMatchObject({
+      title: "SF Tennis API",
+      version: "1.0.0",
+    });
     expect(document.servers).toEqual([{ url: "https://tennis.marvinaziz.de" }]);
+    expect(document.components.schemas).toEqual(expect.any(Object));
     expect(Object.keys(document.paths).sort()).toEqual([
       "/api/courts",
       "/api/directions",
@@ -65,6 +71,9 @@ describe("GET /openapi.json", () => {
     for (const reference of references) {
       expect(resolveLocalReference(document, reference), reference).toBeDefined();
     }
+
+    const validation = await validate(document);
+    expect(validation.valid, compileErrors(validation)).toBe(true);
   });
 
   it("marks guaranteed response fields as required", async () => {
