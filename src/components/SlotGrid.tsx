@@ -7,6 +7,15 @@ interface SlotGridProps {
   courts: Court[];
 }
 
+export function getEffectiveDate(
+  selectedDate: string,
+  allDates: readonly string[]
+): string {
+  return allDates.includes(selectedDate)
+    ? selectedDate
+    : allDates[0] ?? selectedDate;
+}
+
 export function SlotGrid({ courts }: SlotGridProps) {
   // Get all unique dates across all courts
   const allDates = useMemo(() => {
@@ -22,6 +31,7 @@ export function SlotGrid({ courts }: SlotGridProps) {
   const [selectedDate, setSelectedDate] = useState<string>(
     allDates[0] ?? getTodaySF()
   );
+  const effectiveDate = getEffectiveDate(selectedDate, allDates);
 
   useEffect(() => {
     if (!allDates.includes(selectedDate)) {
@@ -49,7 +59,7 @@ export function SlotGrid({ courts }: SlotGridProps) {
             0
           );
           const isToday = date === getTodaySF();
-          const isSelected = date === selectedDate;
+          const isSelected = date === effectiveDate;
 
           return (
             <button
@@ -76,7 +86,7 @@ export function SlotGrid({ courts }: SlotGridProps) {
       {/* Court slots for selected date */}
       {courts.map((court) => {
         const daySlots = court.availableSlots.filter(
-          (s) => s.date === selectedDate
+          (s) => s.date === effectiveDate
         );
 
         return (

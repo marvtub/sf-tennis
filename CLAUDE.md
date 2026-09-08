@@ -16,9 +16,10 @@ the user explicitly asks for a new private feature.
 ## Commands
 
 - `npm run dev` - Next.js dev server. It calls real rec.us and Mapbox APIs.
-- `npm run typecheck` - TypeScript check without a production bundle.
 - `npm test` - Vitest unit tests followed by the Playwright docs smoke tests.
+- `npm run test:unit` - Run the Vitest unit suite once.
 - `npm run test:docs` - Playwright docs smoke tests at desktop and mobile sizes.
+- `npm run typecheck` - TypeScript check without a production bundle.
 - `npm run build` - Next.js production build.
 - `npm run cf:build` - Build the Cloudflare Workers bundle in `.open-next/`.
 - `npm run cf:dev` - Run the built Worker locally with Wrangler.
