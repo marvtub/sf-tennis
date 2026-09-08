@@ -4,6 +4,8 @@
 # next.js
 /.next/
 /out/
+/playwright-report/
+/test-results/
 
 # cloudflare
 /.open-next/
