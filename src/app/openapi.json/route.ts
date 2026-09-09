@@ -65,6 +65,26 @@ const openapi = {
               },
             },
           },
+          "400": {
+            description: "The requested sport or city is not supported.",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  required: ["error"],
+                  properties: {
+                    error: {
+                      type: "string",
+                      enum: [
+                        "Invalid 'sport' parameter",
+                        "Invalid 'city' parameter",
+                      ],
+                    },
+                  },
+                },
+              },
+            },
+          },
           "502": {
             description:
               "An upstream availability request failed; no partial availability is returned.",
