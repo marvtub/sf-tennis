@@ -4,6 +4,8 @@ import type { TravelTime } from "@/types";
 
 // Each location makes two parallel calls, keeping the total in flight at six.
 const DIRECTIONS_LOCATION_CONCURRENCY = 3;
+const DIRECTIONS_REQUEST_TIMEOUT_MS = 5_000;
+const DIRECTIONS_BATCH_TIMEOUT_MS = 30_000;
 
 function isValidCoordinatePair(lat: number, lng: number): boolean {
   return (
@@ -89,25 +91,51 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const results = await mapWithConcurrency(
-    locations,
-    DIRECTIONS_LOCATION_CONCURRENCY,
-    async (loc): Promise<TravelTime> => {
-      const transitUrl = `https://www.google.com/maps/dir/?api=1&origin=${originLat},${originLng}&destination=${loc.lat},${loc.lng}&travelmode=transit`;
-
-      const [walking, driving] = await Promise.all([
-        fetchMapboxDirections(mapboxToken, originLat, originLng, loc.lat, loc.lng, "walking"),
-        fetchMapboxDirections(mapboxToken, originLat, originLng, loc.lat, loc.lng, "driving"),
-      ]);
-
-      return {
-        locationId: loc.id,
-        walking,
-        driving,
-        transitUrl,
-      };
-    }
+  const controller = new AbortController();
+  const timeout = setTimeout(
+    () => controller.abort(),
+    DIRECTIONS_BATCH_TIMEOUT_MS
   );
+  let results: TravelTime[];
+  try {
+    results = await mapWithConcurrency(
+      locations,
+      DIRECTIONS_LOCATION_CONCURRENCY,
+      async (loc): Promise<TravelTime> => {
+        const transitUrl = `https://www.google.com/maps/dir/?api=1&origin=${originLat},${originLng}&destination=${loc.lat},${loc.lng}&travelmode=transit`;
+
+        const [walking, driving] = await Promise.all([
+          fetchMapboxDirections(
+            mapboxToken,
+            originLat,
+            originLng,
+            loc.lat,
+            loc.lng,
+            "walking",
+            controller.signal
+          ),
+          fetchMapboxDirections(
+            mapboxToken,
+            originLat,
+            originLng,
+            loc.lat,
+            loc.lng,
+            "driving",
+            controller.signal
+          ),
+        ]);
+
+        return {
+          locationId: loc.id,
+          walking,
+          driving,
+          transitUrl,
+        };
+      }
+    );
+  } finally {
+    clearTimeout(timeout);
+  }
 
   return NextResponse.json(
     { travelTimes: results },
@@ -147,12 +175,25 @@ async function fetchMapboxDirections(
   originLng: number,
   destLat: number,
   destLng: number,
-  profile: "walking" | "driving"
+  profile: "walking" | "driving",
+  batchSignal: AbortSignal
 ): Promise<{ durationMinutes: number; distanceMeters: number } | null> {
+  const controller = new AbortController();
+  const abortForBatch = () => controller.abort();
+  if (batchSignal.aborted) {
+    abortForBatch();
+  } else {
+    batchSignal.addEventListener("abort", abortForBatch, { once: true });
+  }
+  const timeout = setTimeout(
+    () => controller.abort(),
+    DIRECTIONS_REQUEST_TIMEOUT_MS
+  );
+
   try {
     // Mapbox uses lng,lat order
     const url = `https://api.mapbox.com/directions/v5/mapbox/${profile}/${originLng},${originLat};${destLng},${destLat}?access_token=${token}&overview=false`;
-    const res = await fetch(url);
+    const res = await fetch(url, { signal: controller.signal });
 
     if (!res.ok) return null;
 
@@ -174,5 +215,8 @@ async function fetchMapboxDirections(
     };
   } catch {
     return null;
+  } finally {
+    clearTimeout(timeout);
+    batchSignal.removeEventListener("abort", abortForBatch);
   }
 }
