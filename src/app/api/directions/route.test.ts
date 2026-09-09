@@ -51,7 +51,7 @@ describe("GET /api/directions", () => {
     expect(peakInFlight).toBeLessThanOrEqual(6);
   });
 
-  it("finishes the batch when Mapbox requests stall", async () => {
+  it("returns a partial no-store response when a Mapbox request stalls", async () => {
     vi.useFakeTimers();
     vi.stubEnv("MAPBOX_SECRET_TOKEN", "test-token");
 
@@ -114,6 +114,7 @@ describe("GET /api/directions", () => {
     const response = await responsePromise;
     const body = await response.json();
     expect(response.status).toBe(200);
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
     expect(body.travelTimes).toHaveLength(4);
     expect(body.travelTimes[0].walking).toBeNull();
     expect(body.travelTimes[0].driving).toEqual({
@@ -128,6 +129,63 @@ describe("GET /api/directions", () => {
     ).toBe(true);
     expect(fetchMock).toHaveBeenCalledTimes(8);
     expect(peakInFlight).toBeLessThanOrEqual(6);
+  });
+
+  it("finishes a maximum-size stalled batch at the overall deadline", async () => {
+    vi.useFakeTimers();
+    vi.stubEnv("MAPBOX_SECRET_TOKEN", "test-token");
+
+    const fetchMock = vi.fn(
+      (_input: string | URL | Request, init?: RequestInit) => {
+        const signal = init?.signal;
+        if (!signal) return new Promise<Response>(() => {});
+
+        return new Promise<Response>((_resolve, reject) => {
+          const rejectAsAborted = () => reject(signal.reason);
+
+          if (signal.aborted) {
+            rejectAsAborted();
+          } else {
+            signal.addEventListener("abort", rejectAsAborted, { once: true });
+          }
+        });
+      }
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const locations = Array.from(
+      { length: 50 },
+      (_, index) => `court-${index}:37.${index},-122.${index}`
+    ).join("|");
+    const request = new NextRequest(
+      `https://example.com/api/directions?locations=${encodeURIComponent(locations)}`
+    );
+
+    const responsePromise = GET(request);
+    let settled = false;
+    void responsePromise.then(() => {
+      settled = true;
+    });
+
+    await vi.advanceTimersByTimeAsync(29_999);
+    expect(settled).toBe(false);
+
+    await vi.advanceTimersByTimeAsync(1);
+    await vi.runAllTicks();
+    expect(settled).toBe(true);
+
+    const response = await responsePromise;
+    const body = await response.json();
+    expect(response.status).toBe(200);
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
+    expect(body.travelTimes).toHaveLength(50);
+    expect(
+      body.travelTimes.every(
+        (item: { walking: unknown; driving: unknown }) =>
+          item.walking === null && item.driving === null
+      )
+    ).toBe(true);
+    expect(fetchMock).toHaveBeenCalledTimes(100);
   });
 
   it.each([
