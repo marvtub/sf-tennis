@@ -20,12 +20,31 @@ const SPORT_IDS: Record<Sport, string> = {
  */
 export async function GET(request: NextRequest) {
   try {
-    const sportParam = request.nextUrl.searchParams.get("sport") as Sport | null;
-    const sport: Sport = sportParam === "pickleball" ? "pickleball" : "tennis";
+    const sportParam = request.nextUrl.searchParams.get("sport");
+    if (
+      sportParam !== null &&
+      sportParam !== "tennis" &&
+      sportParam !== "pickleball"
+    ) {
+      return NextResponse.json(
+        { error: "Invalid 'sport' parameter" },
+        { status: 400 }
+      );
+    }
+    const sport: Sport = sportParam ?? "tennis";
     const sportId = SPORT_IDS[sport];
 
-    const cityParam = request.nextUrl.searchParams.get("city") as CityId | null;
-    const cityId: CityId = cityParam && cityParam in CITIES ? cityParam : DEFAULT_CITY;
+    const cityParam = request.nextUrl.searchParams.get("city");
+    if (
+      cityParam !== null &&
+      !Object.prototype.hasOwnProperty.call(CITIES, cityParam)
+    ) {
+      return NextResponse.json(
+        { error: "Invalid 'city' parameter" },
+        { status: 400 }
+      );
+    }
+    const cityId: CityId = cityParam ?? DEFAULT_CITY;
     const city = CITIES[cityId];
 
     const allCourts = await fetchAllCourts(city.slug);

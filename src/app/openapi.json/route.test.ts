@@ -117,5 +117,13 @@ describe("GET /openapi.json", () => {
       "durationMinutes",
       "distanceMeters",
     ]);
+
+    const invalidCourtsRequest = document.paths["/api/courts"].get.responses["400"]
+      .content["application/json"].schema;
+    expect(invalidCourtsRequest.required).toEqual(["error"]);
+    expect(invalidCourtsRequest.properties.error.enum).toEqual([
+      "Invalid 'sport' parameter",
+      "Invalid 'city' parameter",
+    ]);
   });
 });
