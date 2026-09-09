@@ -5,11 +5,13 @@ import { GET } from "./route";
 
 describe("GET /api/directions", () => {
   afterEach(() => {
+    vi.useRealTimers();
     vi.unstubAllEnvs();
     vi.unstubAllGlobals();
   });
 
   it("limits concurrent Mapbox calls for a maximum-size request", async () => {
+    vi.useFakeTimers();
     vi.stubEnv("MAPBOX_SECRET_TOKEN", "test-token");
 
     let inFlight = 0;
@@ -18,7 +20,7 @@ describe("GET /api/directions", () => {
       inFlight += 1;
       peakInFlight = Math.max(peakInFlight, inFlight);
 
-      await new Promise((resolve) => setTimeout(resolve, 1));
+      await new Promise((resolve) => setTimeout(resolve, 1_000));
       inFlight -= 1;
 
       return new Response(
@@ -36,7 +38,9 @@ describe("GET /api/directions", () => {
       `https://example.com/api/directions?locations=${encodeURIComponent(locations)}`
     );
 
-    const response = await GET(request);
+    const responsePromise = GET(request);
+    await vi.runAllTimersAsync();
+    const response = await responsePromise;
     const body = await response.json();
 
     expect(response.status).toBe(200);
@@ -45,6 +49,143 @@ describe("GET /api/directions", () => {
       .toEqual(Array.from({ length: 50 }, (_, index) => `court-${index}`));
     expect(fetchMock).toHaveBeenCalledTimes(100);
     expect(peakInFlight).toBeLessThanOrEqual(6);
+  });
+
+  it("returns a partial no-store response when a Mapbox request stalls", async () => {
+    vi.useFakeTimers();
+    vi.stubEnv("MAPBOX_SECRET_TOKEN", "test-token");
+
+    let inFlight = 0;
+    let peakInFlight = 0;
+    let callCount = 0;
+    const fetchMock = vi.fn(
+      (_input: string | URL | Request, init?: RequestInit) => {
+        inFlight += 1;
+        peakInFlight = Math.max(peakInFlight, inFlight);
+
+        callCount += 1;
+        if (callCount !== 1) {
+          inFlight -= 1;
+          return Promise.resolve(
+            new Response(
+              JSON.stringify({ routes: [{ duration: 600, distance: 1_000 }] }),
+              { status: 200 }
+            )
+          );
+        }
+
+        const signal = init?.signal;
+        if (!signal) return new Promise<Response>(() => {});
+
+        return new Promise<Response>((_resolve, reject) => {
+          const rejectAsAborted = () => {
+            inFlight -= 1;
+            reject(signal.reason);
+          };
+
+          if (signal.aborted) {
+            rejectAsAborted();
+          } else {
+            signal.addEventListener("abort", rejectAsAborted, { once: true });
+          }
+        });
+      }
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const locations = Array.from(
+      { length: 4 },
+      (_, index) => `court-${index}:37.${index},-122.${index}`
+    ).join("|");
+    const request = new NextRequest(
+      `https://example.com/api/directions?locations=${encodeURIComponent(locations)}`
+    );
+
+    const responsePromise = GET(request);
+    await vi.advanceTimersByTimeAsync(5_000);
+    let settled = false;
+    void responsePromise.then(() => {
+      settled = true;
+    });
+    await vi.runAllTicks();
+
+    expect(settled).toBe(true);
+
+    const response = await responsePromise;
+    const body = await response.json();
+    expect(response.status).toBe(200);
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
+    expect(body.travelTimes).toHaveLength(4);
+    expect(body.travelTimes[0].walking).toBeNull();
+    expect(body.travelTimes[0].driving).toEqual({
+      durationMinutes: 10,
+      distanceMeters: 1_000,
+    });
+    expect(
+      body.travelTimes.slice(1).every(
+        (item: { walking: unknown; driving: unknown }) =>
+          item.walking !== null && item.driving !== null
+      )
+    ).toBe(true);
+    expect(fetchMock).toHaveBeenCalledTimes(8);
+    expect(peakInFlight).toBeLessThanOrEqual(6);
+  });
+
+  it("finishes a maximum-size stalled batch at the overall deadline", async () => {
+    vi.useFakeTimers();
+    vi.stubEnv("MAPBOX_SECRET_TOKEN", "test-token");
+
+    const fetchMock = vi.fn(
+      (_input: string | URL | Request, init?: RequestInit) => {
+        const signal = init?.signal;
+        if (!signal) return new Promise<Response>(() => {});
+
+        return new Promise<Response>((_resolve, reject) => {
+          const rejectAsAborted = () => reject(signal.reason);
+
+          if (signal.aborted) {
+            rejectAsAborted();
+          } else {
+            signal.addEventListener("abort", rejectAsAborted, { once: true });
+          }
+        });
+      }
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const locations = Array.from(
+      { length: 50 },
+      (_, index) => `court-${index}:37.${index},-122.${index}`
+    ).join("|");
+    const request = new NextRequest(
+      `https://example.com/api/directions?locations=${encodeURIComponent(locations)}`
+    );
+
+    const responsePromise = GET(request);
+    let settled = false;
+    void responsePromise.then(() => {
+      settled = true;
+    });
+
+    await vi.advanceTimersByTimeAsync(29_999);
+    expect(settled).toBe(false);
+
+    await vi.advanceTimersByTimeAsync(1);
+    await vi.runAllTicks();
+    expect(settled).toBe(true);
+
+    const response = await responsePromise;
+    const body = await response.json();
+    expect(response.status).toBe(200);
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
+    expect(body.travelTimes).toHaveLength(50);
+    expect(
+      body.travelTimes.every(
+        (item: { walking: unknown; driving: unknown }) =>
+          item.walking === null && item.driving === null
+      )
+    ).toBe(true);
+    expect(fetchMock).toHaveBeenCalledTimes(100);
   });
 
   it.each([

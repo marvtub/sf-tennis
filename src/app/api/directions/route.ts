@@ -4,6 +4,13 @@ import type { TravelTime } from "@/types";
 
 // Each location makes two parallel calls, keeping the total in flight at six.
 const DIRECTIONS_LOCATION_CONCURRENCY = 3;
+const DIRECTIONS_REQUEST_TIMEOUT_MS = 5_000;
+const DIRECTIONS_BATCH_TIMEOUT_MS = 30_000;
+
+interface MapboxDirectionsResult {
+  route: TravelTime["walking"];
+  timedOut: boolean;
+}
 
 function isValidCoordinatePair(lat: number, lng: number): boolean {
   return (
@@ -89,31 +96,62 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const results = await mapWithConcurrency(
-    locations,
-    DIRECTIONS_LOCATION_CONCURRENCY,
-    async (loc): Promise<TravelTime> => {
-      const transitUrl = `https://www.google.com/maps/dir/?api=1&origin=${originLat},${originLng}&destination=${loc.lat},${loc.lng}&travelmode=transit`;
-
-      const [walking, driving] = await Promise.all([
-        fetchMapboxDirections(mapboxToken, originLat, originLng, loc.lat, loc.lng, "walking"),
-        fetchMapboxDirections(mapboxToken, originLat, originLng, loc.lat, loc.lng, "driving"),
-      ]);
-
-      return {
-        locationId: loc.id,
-        walking,
-        driving,
-        transitUrl,
-      };
-    }
+  const controller = new AbortController();
+  const timeout = setTimeout(
+    () => controller.abort(),
+    DIRECTIONS_BATCH_TIMEOUT_MS
   );
+  let results: TravelTime[];
+  let hadTimeout = false;
+  try {
+    results = await mapWithConcurrency(
+      locations,
+      DIRECTIONS_LOCATION_CONCURRENCY,
+      async (loc): Promise<TravelTime> => {
+        const transitUrl = `https://www.google.com/maps/dir/?api=1&origin=${originLat},${originLng}&destination=${loc.lat},${loc.lng}&travelmode=transit`;
+
+        const [walkingResult, drivingResult] = await Promise.all([
+          fetchMapboxDirections(
+            mapboxToken,
+            originLat,
+            originLng,
+            loc.lat,
+            loc.lng,
+            "walking",
+            controller.signal
+          ),
+          fetchMapboxDirections(
+            mapboxToken,
+            originLat,
+            originLng,
+            loc.lat,
+            loc.lng,
+            "driving",
+            controller.signal
+          ),
+        ]);
+
+        hadTimeout ||= walkingResult.timedOut || drivingResult.timedOut;
+
+        return {
+          locationId: loc.id,
+          walking: walkingResult.route,
+          driving: drivingResult.route,
+          transitUrl,
+        };
+      }
+    );
+  } finally {
+    clearTimeout(timeout);
+  }
 
   return NextResponse.json(
     { travelTimes: results },
     {
       headers: {
-        "Cache-Control": `s-maxage=${DIRECTIONS_CACHE_SECONDS}, stale-while-revalidate=86400`,
+        "Cache-Control": hadTimeout
+          ? "no-store"
+          : `s-maxage=${DIRECTIONS_CACHE_SECONDS}, stale-while-revalidate=86400`,
       },
     }
   );
@@ -147,32 +185,58 @@ async function fetchMapboxDirections(
   originLng: number,
   destLat: number,
   destLng: number,
-  profile: "walking" | "driving"
-): Promise<{ durationMinutes: number; distanceMeters: number } | null> {
+  profile: "walking" | "driving",
+  batchSignal: AbortSignal
+): Promise<MapboxDirectionsResult> {
+  const controller = new AbortController();
+  let timedOut = false;
+  const abortForBatch = () => {
+    timedOut = true;
+    controller.abort();
+  };
+  if (batchSignal.aborted) {
+    abortForBatch();
+  } else {
+    batchSignal.addEventListener("abort", abortForBatch, { once: true });
+  }
+  const timeout = setTimeout(
+    () => {
+      timedOut = true;
+      controller.abort();
+    },
+    DIRECTIONS_REQUEST_TIMEOUT_MS
+  );
+
   try {
     // Mapbox uses lng,lat order
     const url = `https://api.mapbox.com/directions/v5/mapbox/${profile}/${originLng},${originLat};${destLng},${destLat}?access_token=${token}&overview=false`;
-    const res = await fetch(url);
+    const res = await fetch(url, { signal: controller.signal });
 
-    if (!res.ok) return null;
+    if (!res.ok) return { route: null, timedOut };
 
     const data = await res.json();
     const route = data.routes?.[0];
-    if (!route) return null;
+    if (!route) return { route: null, timedOut };
     if (
       !Number.isFinite(route.duration) ||
       route.duration < 0 ||
       !Number.isFinite(route.distance) ||
       route.distance < 0
     ) {
-      return null;
+      return { route: null, timedOut };
     }
 
     return {
-      durationMinutes: Math.round(route.duration / 60),
-      distanceMeters: Math.round(route.distance),
+      route: {
+        durationMinutes: Math.round(route.duration / 60),
+        distanceMeters: Math.round(route.distance),
+      },
+      timedOut,
     };
   } catch {
-    return null;
+    return { route: null, timedOut };
+  } finally {
+    clearTimeout(timeout);
+    batchSignal.removeEventListener("abort", abortForBatch);
   }
 }
