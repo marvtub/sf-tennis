@@ -12,6 +12,13 @@ interface CachedData {
   cachedAt: number;
 }
 
+export function shouldCacheTravelTimesResponse(response: Response): boolean {
+  return !response.headers
+    .get("Cache-Control")
+    ?.split(",")
+    .some((directive) => directive.trim().toLowerCase() === "no-store");
+}
+
 function cacheKey(origin: UserLocation, courtIds: string): string {
   // Round to ~100m precision so tiny GPS jitter doesn't bust the cache
   const lat = origin.lat.toFixed(3);
@@ -72,17 +79,17 @@ export function useTravelTimes(
       .then(async (res) => {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         return {
-          data: await res.json() as { travelTimes: TravelTime[] },
-          cacheable: !res.headers.get("Cache-Control")?.includes("no-store"),
+          data: (await res.json()) as { travelTimes: TravelTime[] },
+          shouldCache: shouldCacheTravelTimesResponse(res),
         };
       })
-      .then(({ data, cacheable }) => {
+      .then(({ data, shouldCache }) => {
         if (cancelled) return;
 
         const map = new Map(data.travelTimes.map((t) => [t.locationId, t]));
         setTravelTimes(map);
 
-        if (!cacheable) return;
+        if (!shouldCache) return;
 
         // Cache in localStorage
         try {
