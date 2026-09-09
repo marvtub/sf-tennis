@@ -5,6 +5,13 @@ import type { TravelTime } from "@/types";
 // Each location makes two parallel calls, keeping the total in flight at six.
 const DIRECTIONS_LOCATION_CONCURRENCY = 3;
 
+type RouteEstimate = NonNullable<TravelTime["walking"]>;
+
+interface MapboxDirectionsResult {
+  route: RouteEstimate | null;
+  cacheable: boolean;
+}
+
 function isValidCoordinatePair(lat: number, lng: number): boolean {
   return (
     Number.isFinite(lat) &&
@@ -92,7 +99,7 @@ export async function GET(request: NextRequest) {
   const results = await mapWithConcurrency(
     locations,
     DIRECTIONS_LOCATION_CONCURRENCY,
-    async (loc): Promise<TravelTime> => {
+    async (loc) => {
       const transitUrl = `https://www.google.com/maps/dir/?api=1&origin=${originLat},${originLng}&destination=${loc.lat},${loc.lng}&travelmode=transit`;
 
       const [walking, driving] = await Promise.all([
@@ -101,19 +108,26 @@ export async function GET(request: NextRequest) {
       ]);
 
       return {
-        locationId: loc.id,
-        walking,
-        driving,
-        transitUrl,
+        travelTime: {
+          locationId: loc.id,
+          walking: walking.route,
+          driving: driving.route,
+          transitUrl,
+        } satisfies TravelTime,
+        cacheable: walking.cacheable && driving.cacheable,
       };
     }
   );
 
+  const cacheable = results.every((result) => result.cacheable);
+
   return NextResponse.json(
-    { travelTimes: results },
+    { travelTimes: results.map((result) => result.travelTime) },
     {
       headers: {
-        "Cache-Control": `s-maxage=${DIRECTIONS_CACHE_SECONDS}, stale-while-revalidate=86400`,
+        "Cache-Control": cacheable
+          ? `s-maxage=${DIRECTIONS_CACHE_SECONDS}, stale-while-revalidate=86400`
+          : "no-store",
       },
     }
   );
@@ -148,31 +162,38 @@ async function fetchMapboxDirections(
   destLat: number,
   destLng: number,
   profile: "walking" | "driving"
-): Promise<{ durationMinutes: number; distanceMeters: number } | null> {
+): Promise<MapboxDirectionsResult> {
   try {
     // Mapbox uses lng,lat order
     const url = `https://api.mapbox.com/directions/v5/mapbox/${profile}/${originLng},${originLat};${destLng},${destLat}?access_token=${token}&overview=false`;
     const res = await fetch(url);
 
-    if (!res.ok) return null;
+    if (!res.ok) return { route: null, cacheable: false };
 
     const data = await res.json();
     const route = data.routes?.[0];
-    if (!route) return null;
+    if (!route) {
+      const definitiveNoRoute =
+        data.code === "NoRoute" || data.code === "NoSegment";
+      return { route: null, cacheable: definitiveNoRoute };
+    }
     if (
       !Number.isFinite(route.duration) ||
       route.duration < 0 ||
       !Number.isFinite(route.distance) ||
       route.distance < 0
     ) {
-      return null;
+      return { route: null, cacheable: false };
     }
 
     return {
-      durationMinutes: Math.round(route.duration / 60),
-      distanceMeters: Math.round(route.distance),
+      route: {
+        durationMinutes: Math.round(route.duration / 60),
+        distanceMeters: Math.round(route.distance),
+      },
+      cacheable: true,
     };
   } catch {
-    return null;
+    return { route: null, cacheable: false };
   }
 }
