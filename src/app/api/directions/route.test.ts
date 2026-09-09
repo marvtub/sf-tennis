@@ -316,5 +316,83 @@ describe("GET /api/directions", () => {
       durationMinutes: 10,
       distanceMeters: 1_001,
     });
+    expect(response.headers.get("Cache-Control")).toBe(
+      "s-maxage=86400, stale-while-revalidate=86400"
+    );
+  });
+
+  it("does not cache a response degraded by a Mapbox rate limit", async () => {
+    vi.stubEnv("MAPBOX_SECRET_TOKEN", "test-token");
+    vi.stubGlobal("fetch", vi.fn()
+      .mockResolvedValueOnce(new Response(null, { status: 429 }))
+      .mockResolvedValueOnce(new Response(
+        JSON.stringify({ routes: [{ duration: 600, distance: 1_000 }] }),
+        { status: 200 }
+      ))
+    );
+
+    const request = new NextRequest(
+      "https://example.com/api/directions?locations=court-1:37.75,-122.45"
+    );
+    const response = await GET(request);
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.travelTimes[0].walking).toBeNull();
+    expect(body.travelTimes[0].driving).not.toBeNull();
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
+  });
+
+  it("does not cache a response degraded by a Mapbox network failure", async () => {
+    vi.stubEnv("MAPBOX_SECRET_TOKEN", "test-token");
+    vi.stubGlobal("fetch", vi.fn()
+      .mockRejectedValueOnce(new Error("network unavailable"))
+      .mockResolvedValueOnce(new Response(
+        JSON.stringify({ routes: [{ duration: 600, distance: 1_000 }] }),
+        { status: 200 }
+      ))
+    );
+
+    const request = new NextRequest(
+      "https://example.com/api/directions?locations=court-1:37.75,-122.45"
+    );
+    const response = await GET(request);
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
+  });
+
+  it("does not cache a malformed successful Mapbox response", async () => {
+    vi.stubEnv("MAPBOX_SECRET_TOKEN", "test-token");
+    vi.stubGlobal("fetch", vi.fn(async () => ({
+      ok: true,
+      json: async () => ({}),
+    })));
+
+    const request = new NextRequest(
+      "https://example.com/api/directions?locations=court-1:37.75,-122.45"
+    );
+    const response = await GET(request);
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
+  });
+
+  it("keeps caching a definitive no-route response", async () => {
+    vi.stubEnv("MAPBOX_SECRET_TOKEN", "test-token");
+    vi.stubGlobal("fetch", vi.fn(async () => ({
+      ok: true,
+      json: async () => ({ code: "NoRoute", routes: [] }),
+    })));
+
+    const request = new NextRequest(
+      "https://example.com/api/directions?locations=court-1:37.75,-122.45"
+    );
+    const response = await GET(request);
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("Cache-Control")).toBe(
+      "s-maxage=86400, stale-while-revalidate=86400"
+    );
   });
 });

@@ -9,7 +9,7 @@ const DIRECTIONS_BATCH_TIMEOUT_MS = 30_000;
 
 interface MapboxDirectionsResult {
   route: TravelTime["walking"];
-  timedOut: boolean;
+  cacheable: boolean;
 }
 
 function isValidCoordinatePair(lat: number, lng: number): boolean {
@@ -101,13 +101,12 @@ export async function GET(request: NextRequest) {
     () => controller.abort(),
     DIRECTIONS_BATCH_TIMEOUT_MS
   );
-  let results: TravelTime[];
-  let hadTimeout = false;
+  let results: Array<{ travelTime: TravelTime; cacheable: boolean }>;
   try {
     results = await mapWithConcurrency(
       locations,
       DIRECTIONS_LOCATION_CONCURRENCY,
-      async (loc): Promise<TravelTime> => {
+      async (loc) => {
         const transitUrl = `https://www.google.com/maps/dir/?api=1&origin=${originLat},${originLng}&destination=${loc.lat},${loc.lng}&travelmode=transit`;
 
         const [walkingResult, drivingResult] = await Promise.all([
@@ -131,13 +130,14 @@ export async function GET(request: NextRequest) {
           ),
         ]);
 
-        hadTimeout ||= walkingResult.timedOut || drivingResult.timedOut;
-
         return {
-          locationId: loc.id,
-          walking: walkingResult.route,
-          driving: drivingResult.route,
-          transitUrl,
+          travelTime: {
+            locationId: loc.id,
+            walking: walkingResult.route,
+            driving: drivingResult.route,
+            transitUrl,
+          } satisfies TravelTime,
+          cacheable: walkingResult.cacheable && drivingResult.cacheable,
         };
       }
     );
@@ -145,13 +145,15 @@ export async function GET(request: NextRequest) {
     clearTimeout(timeout);
   }
 
+  const cacheable = results.every((result) => result.cacheable);
+
   return NextResponse.json(
-    { travelTimes: results },
+    { travelTimes: results.map((result) => result.travelTime) },
     {
       headers: {
-        "Cache-Control": hadTimeout
-          ? "no-store"
-          : `s-maxage=${DIRECTIONS_CACHE_SECONDS}, stale-while-revalidate=86400`,
+        "Cache-Control": cacheable
+          ? `s-maxage=${DIRECTIONS_CACHE_SECONDS}, stale-while-revalidate=86400`
+          : "no-store",
       },
     }
   );
@@ -189,21 +191,14 @@ async function fetchMapboxDirections(
   batchSignal: AbortSignal
 ): Promise<MapboxDirectionsResult> {
   const controller = new AbortController();
-  let timedOut = false;
-  const abortForBatch = () => {
-    timedOut = true;
-    controller.abort();
-  };
+  const abortForBatch = () => controller.abort();
   if (batchSignal.aborted) {
     abortForBatch();
   } else {
     batchSignal.addEventListener("abort", abortForBatch, { once: true });
   }
   const timeout = setTimeout(
-    () => {
-      timedOut = true;
-      controller.abort();
-    },
+    () => controller.abort(),
     DIRECTIONS_REQUEST_TIMEOUT_MS
   );
 
@@ -212,18 +207,22 @@ async function fetchMapboxDirections(
     const url = `https://api.mapbox.com/directions/v5/mapbox/${profile}/${originLng},${originLat};${destLng},${destLat}?access_token=${token}&overview=false`;
     const res = await fetch(url, { signal: controller.signal });
 
-    if (!res.ok) return { route: null, timedOut };
+    if (!res.ok) return { route: null, cacheable: false };
 
     const data = await res.json();
     const route = data.routes?.[0];
-    if (!route) return { route: null, timedOut };
+    if (!route) {
+      const definitiveNoRoute =
+        data.code === "NoRoute" || data.code === "NoSegment";
+      return { route: null, cacheable: definitiveNoRoute };
+    }
     if (
       !Number.isFinite(route.duration) ||
       route.duration < 0 ||
       !Number.isFinite(route.distance) ||
       route.distance < 0
     ) {
-      return { route: null, timedOut };
+      return { route: null, cacheable: false };
     }
 
     return {
@@ -231,10 +230,10 @@ async function fetchMapboxDirections(
         durationMinutes: Math.round(route.duration / 60),
         distanceMeters: Math.round(route.distance),
       },
-      timedOut,
+      cacheable: true,
     };
   } catch {
-    return { route: null, timedOut };
+    return { route: null, cacheable: false };
   } finally {
     clearTimeout(timeout);
     batchSignal.removeEventListener("abort", abortForBatch);
