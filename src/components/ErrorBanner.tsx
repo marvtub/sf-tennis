@@ -8,9 +8,14 @@ interface ErrorBannerProps {
 export function ErrorBanner({ message, onRetry }: ErrorBannerProps) {
   return (
     <div className="absolute top-12 left-0 right-0 z-30 mx-4 mt-2">
-      <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-3 flex items-center justify-between shadow-sm">
+      <div
+        role="alert"
+        className="bg-red-50 border border-red-200 rounded-lg px-4 py-3 flex items-center justify-between shadow-sm"
+      >
         <div className="flex items-center gap-2">
-          <span className="text-red-500 text-lg">⚠</span>
+          <span aria-hidden="true" className="text-red-500 text-lg">
+            ⚠
+          </span>
           <div>
             <p className="text-sm font-medium text-red-800">
               Failed to load availability
