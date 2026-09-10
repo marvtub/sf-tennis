@@ -78,6 +78,29 @@ describe("getEffectiveDate", () => {
 });
 
 describe("SlotGrid", () => {
+  it("describes empty availability without inventing a booking policy", () => {
+    const courts: Court[] = [
+      {
+        id: "court-1",
+        courtNumber: "1",
+        sportId: "tennis",
+        priceCentsPerHour: 0,
+        allowedDurations: [60],
+        reservationWindowDays: 5,
+        releaseTime: "09:00:00",
+        availableSlots: [],
+        bookingUrl: "https://example.com/book",
+      },
+    ];
+
+    const text = getText(SlotGrid({ courts }));
+
+    expect(text).toContain("No bookable slots available this week");
+    expect(text).not.toContain("No courts available");
+    expect(text).not.toContain("7 days");
+    expect(text).not.toContain("8:00 AM");
+  });
+
   it("renders newly available slots immediately when the stored selection is stale", () => {
     const courts: Court[] = [
       {
