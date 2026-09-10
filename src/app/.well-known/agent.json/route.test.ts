@@ -15,6 +15,19 @@ describe("legacy agent-card routes", () => {
       const body = await response.json();
 
       expect(response.status).toBe(410);
+      expect(response.headers.get("Content-Type")).toBe(
+        "application/json; charset=utf-8",
+      );
+      expect(response.headers.get("Cache-Control")).toBe(
+        "public, max-age=3600, s-maxage=86400",
+      );
+      expect(response.headers.get("Link")).toBe(
+        [
+          '</openapi.json>; rel="service-desc"; type="application/vnd.oai.openapi+json"',
+          '</.well-known/api-catalog>; rel="api-catalog"; type="application/linkset+json"',
+          '</.well-known/agent-skills/index.json>; rel="agent-skills"; type="application/json"',
+        ].join(", "),
+      );
       expect(body).toEqual({
         error: "A2A service unavailable",
         message:
