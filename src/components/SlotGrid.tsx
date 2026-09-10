@@ -65,6 +65,7 @@ export function SlotGrid({ courts }: SlotGridProps) {
             <button
               key={date}
               onClick={() => setSelectedDate(date)}
+              aria-pressed={isSelected}
               className={`
                 flex-shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors
                 ${isSelected
