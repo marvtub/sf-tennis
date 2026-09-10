@@ -42,8 +42,7 @@ export function SlotGrid({ courts }: SlotGridProps) {
   if (allDates.length === 0) {
     return (
       <div className="text-center py-4 text-gray-500 text-sm">
-        <p className="font-medium">No courts available this week</p>
-        <p className="text-xs mt-1">Check back tomorrow — slots open 7 days out at 8:00 AM</p>
+        <p className="font-medium">No bookable slots available this week</p>
       </div>
     );
   }
@@ -65,6 +64,7 @@ export function SlotGrid({ courts }: SlotGridProps) {
             <button
               key={date}
               onClick={() => setSelectedDate(date)}
+              aria-pressed={isSelected}
               className={`
                 flex-shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors
                 ${isSelected
