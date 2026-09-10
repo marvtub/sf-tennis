@@ -19,6 +19,7 @@ vi.mock("react", async () => {
 import { getEffectiveDate, SlotGrid } from "./SlotGrid";
 
 interface ElementProps {
+  "aria-pressed"?: boolean;
   children?: ReactNode;
   className?: string;
 }
@@ -47,6 +48,19 @@ function hasClass(node: ReactNode, className: string): boolean {
     node.props.className?.includes(className) === true ||
     hasClass(node.props.children, className)
   );
+}
+
+function getDateButtonPressedStates(node: ReactNode): Array<boolean | undefined> {
+  if (Array.isArray(node)) {
+    return node.flatMap(getDateButtonPressedStates);
+  }
+  if (!isValidElement<ElementProps>(node)) {
+    return [];
+  }
+  if (node.type === "button") {
+    return [node.props["aria-pressed"]];
+  }
+  return getDateButtonPressedStates(node.props.children);
 }
 
 describe("getEffectiveDate", () => {
@@ -114,5 +128,44 @@ describe("SlotGrid", () => {
     expect(hasClass(rendered, "bg-blue-600 text-white")).toBe(true);
     expect(text).toContain("09:00");
     expect(text).not.toContain("No slots");
+  });
+
+  it("exposes which date controls the displayed slots", () => {
+    const courts: Court[] = [
+      {
+        id: "court-1",
+        courtNumber: "1",
+        sportId: "tennis",
+        priceCentsPerHour: 0,
+        allowedDurations: [60],
+        reservationWindowDays: 7,
+        releaseTime: "08:00:00",
+        availableSlots: [
+          {
+            datetime: "2026-09-08 09:00:00",
+            date: "2026-09-08",
+            time: "09:00",
+          },
+          {
+            datetime: "2026-09-09 10:00:00",
+            date: "2026-09-09",
+            time: "10:00",
+          },
+        ],
+        bookingUrl: "https://example.com/book",
+      },
+    ];
+
+    storedSelection.value = "2026-09-08";
+    expect(getDateButtonPressedStates(SlotGrid({ courts }))).toEqual([
+      true,
+      false,
+    ]);
+
+    storedSelection.value = "2026-09-09";
+    expect(getDateButtonPressedStates(SlotGrid({ courts }))).toEqual([
+      false,
+      true,
+    ]);
   });
 });
