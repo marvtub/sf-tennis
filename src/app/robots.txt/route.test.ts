@@ -12,15 +12,21 @@ describe("GET /robots.txt", () => {
     expect(response.headers.get("Cache-Control")).toBe(
       "public, max-age=3600, s-maxage=86400",
     );
-    for (const directive of [
-      "User-agent: *\nAllow: /",
-      "User-agent: GPTBot\nAllow: /",
-      "User-agent: ClaudeBot\nAllow: /",
-      "User-agent: PerplexityBot\nAllow: /",
-      "User-agent: Google-Extended\nAllow: /",
-      "Content-Signal: ai-train=no, search=yes, ai-input=yes",
+    const groups = body.split(/\n\s*\n/);
+    for (const userAgent of [
+      "*",
+      "GPTBot",
+      "ClaudeBot",
+      "PerplexityBot",
+      "Google-Extended",
     ]) {
-      expect(body).toContain(directive);
+      expect(groups).toContain(
+        [
+          `User-agent: ${userAgent}`,
+          "Allow: /",
+          "Content-Signal: ai-train=no, search=yes, ai-input=yes",
+        ].join("\n"),
+      );
     }
     expect(body).toContain(
       "Sitemap: https://tennis.marvinaziz.de/sitemap.xml",
