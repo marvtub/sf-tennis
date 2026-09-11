@@ -1,7 +1,7 @@
 # AGENTS.md
 
-This guide is for coding agents working in this repository. Keep it aligned
-with `CLAUDE.md`.
+This guide is the repository contract for coding agents working in this
+repository.
 
 ## Current Product Boundary
 
