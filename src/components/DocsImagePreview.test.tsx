@@ -71,12 +71,12 @@ describe("DocsImagePreview", () => {
     render(images);
     open("Second image");
 
-    expect(container.querySelector('[role="dialog"]')).not.toBeNull();
+    expect(container.querySelector("dialog")).not.toBeNull();
     expect(document.body.style.overflow).toBe("hidden");
 
     render(images.slice(0, 1));
 
-    expect(container.querySelector('[role="dialog"]')).toBeNull();
+    expect(container.querySelector("dialog")).toBeNull();
     expect(document.body.style.overflow).toBe("auto");
   });
 
@@ -90,7 +90,7 @@ describe("DocsImagePreview", () => {
       window.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowLeft" }));
     });
 
-    expect(container.querySelector('[role="dialog"]')).toBeNull();
+    expect(container.querySelector("dialog")).toBeNull();
     expect(document.body.style.overflow).toBe("auto");
   });
 });
