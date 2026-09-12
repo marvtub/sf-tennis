@@ -91,9 +91,19 @@ export function CommandPalette({
   useEffect(() => {
     function handleTab(e: KeyboardEvent) {
       if (e.key !== "Tab" || !modalRef.current) return;
-      const focusables = modalRef.current.querySelectorAll<HTMLElement>(
-        'button, [href], input, [tabindex]:not([tabindex="-1"])'
-      );
+      const focusables = Array.from(
+        modalRef.current.querySelectorAll<HTMLElement>(
+          'button, [href], input, [tabindex]:not([tabindex="-1"])'
+        )
+      ).filter((element) => {
+        const style = window.getComputedStyle(element);
+        return (
+          !element.matches(":disabled") &&
+          style.display !== "none" &&
+          style.visibility === "visible" &&
+          element.getClientRects().length > 0
+        );
+      });
       if (focusables.length === 0) return;
       const first = focusables[0];
       const last = focusables[focusables.length - 1];
