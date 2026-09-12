@@ -253,16 +253,27 @@ export function CommandPalette({
   // Keyboard navigation (desktop)
   useEffect(() => {
     function handleKey(e: KeyboardEvent) {
-      if (e.key === "Escape") {
+      const target = e.target instanceof Element ? e.target : null;
+      const action = getCommandKeyboardAction({
+        key: e.key,
+        isDesktop,
+        isCommandScope:
+          e.target === inputRef.current ||
+          Boolean(target && listRef.current?.contains(target)),
+        isNativeButton: Boolean(target?.closest("button")),
+        hasItems: desktopItems.length > 0,
+      });
+
+      if (action === "close") {
         e.preventDefault();
         onClose();
-      } else if (e.key === "ArrowDown") {
+      } else if (action === "next") {
         e.preventDefault();
         setSelectedIndex((i) => Math.min(i + 1, desktopItems.length - 1));
-      } else if (e.key === "ArrowUp") {
+      } else if (action === "previous") {
         e.preventDefault();
         setSelectedIndex((i) => Math.max(i - 1, 0));
-      } else if (e.key === "Enter" && desktopItems.length > 0) {
+      } else if (action === "select") {
         e.preventDefault();
         handleSelect(desktopItems[selectedIndex]);
       }
@@ -270,7 +281,7 @@ export function CommandPalette({
 
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
-  }, [desktopItems, selectedIndex, onClose, handleSelect]);
+  }, [desktopItems, selectedIndex, isDesktop, onClose, handleSelect]);
 
   return (
     <div
@@ -433,6 +444,30 @@ export function CommandPalette({
       </div>
     </div>
   );
+}
+
+type CommandKeyboardAction = "close" | "next" | "previous" | "select";
+
+export function getCommandKeyboardAction({
+  key,
+  isDesktop,
+  isCommandScope,
+  isNativeButton,
+  hasItems,
+}: {
+  key: string;
+  isDesktop: boolean;
+  isCommandScope: boolean;
+  isNativeButton: boolean;
+  hasItems: boolean;
+}): CommandKeyboardAction | null {
+  if (key === "Escape") return "close";
+  if (!isDesktop || !isCommandScope) return null;
+  if (isNativeButton) return null;
+  if (key === "ArrowDown") return "next";
+  if (key === "ArrowUp") return "previous";
+  if (key === "Enter" && hasItems) return "select";
+  return null;
 }
 
 // ── Mobile tab content ──
@@ -780,6 +815,7 @@ function DesktopSettingRow({
       data-idx={idx}
       onClick={onSelect}
       onMouseEnter={onHover}
+      onFocus={onHover}
       className={`w-full text-left px-4 py-2 flex items-center justify-between text-sm transition-colors ${
         isSelected ? "bg-blue-50" : "hover:bg-gray-50"
       }`}
@@ -815,6 +851,7 @@ function DesktopCourtRow({
       data-idx={idx}
       onClick={onSelect}
       onMouseEnter={onHover}
+      onFocus={onHover}
       className={`w-full text-left px-4 py-2.5 flex items-center gap-3 transition-colors ${
         isSelected ? "bg-blue-50" : "hover:bg-gray-50"
       }`}
