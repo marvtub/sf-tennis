@@ -29,7 +29,7 @@ vi.mock("react-map-gl/mapbox", () => ({
   NavigationControl: () => null,
 }));
 
-describe("MapView location centering", () => {
+describe("MapView location behavior", () => {
   let container: HTMLDivElement;
   let root: Root;
 
@@ -78,5 +78,24 @@ describe("MapView location centering", () => {
 
     await renderWithLocation({ lat: 37.79, lng: -122.41, isDefault: false });
     expectMapCenteredAt(37.79, -122.41);
+  });
+
+  it("shows Home only for a resolved user location", async () => {
+    await renderWithLocation({
+      lat: CITIES.sf.lat,
+      lng: CITIES.sf.lng,
+      isDefault: true,
+    });
+    expect(container.querySelector('[aria-label="Home"]')).toBeNull();
+
+    await renderWithLocation({ lat: 37.78, lng: -122.42, isDefault: false });
+    expect(container.querySelector('[aria-label="Home"]')).not.toBeNull();
+
+    await renderWithLocation({
+      lat: CITIES.sf.lat,
+      lng: CITIES.sf.lng,
+      isDefault: true,
+    });
+    expect(container.querySelector('[aria-label="Home"]')).toBeNull();
   });
 });
