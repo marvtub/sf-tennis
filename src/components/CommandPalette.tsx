@@ -463,9 +463,10 @@ export function getCommandKeyboardAction({
 }): CommandKeyboardAction | null {
   if (key === "Escape") return "close";
   if (!isDesktop || !isCommandScope) return null;
+  if (isNativeButton) return null;
   if (key === "ArrowDown") return "next";
   if (key === "ArrowUp") return "previous";
-  if (key === "Enter" && hasItems && !isNativeButton) return "select";
+  if (key === "Enter" && hasItems) return "select";
   return null;
 }
 
@@ -814,6 +815,7 @@ function DesktopSettingRow({
       data-idx={idx}
       onClick={onSelect}
       onMouseEnter={onHover}
+      onFocus={onHover}
       className={`w-full text-left px-4 py-2 flex items-center justify-between text-sm transition-colors ${
         isSelected ? "bg-blue-50" : "hover:bg-gray-50"
       }`}
@@ -849,6 +851,7 @@ function DesktopCourtRow({
       data-idx={idx}
       onClick={onSelect}
       onMouseEnter={onHover}
+      onFocus={onHover}
       className={`w-full text-left px-4 py-2.5 flex items-center gap-3 transition-colors ${
         isSelected ? "bg-blue-50" : "hover:bg-gray-50"
       }`}
