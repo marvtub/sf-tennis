@@ -11,10 +11,24 @@ export type DocsPreviewImage = {
 
 export function DocsImagePreview({ images }: { images: DocsPreviewImage[] }) {
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
-  const activeImage = activeIndex === null ? null : images[activeIndex];
+  const hasValidActiveIndex =
+    activeIndex !== null &&
+    Number.isInteger(activeIndex) &&
+    activeIndex >= 0 &&
+    activeIndex < images.length;
+  const activeImage = hasValidActiveIndex ? images[activeIndex] : null;
 
   useEffect(() => {
-    if (activeIndex === null) return;
+    setActiveIndex((index) =>
+      index !== null &&
+      (!Number.isInteger(index) || index < 0 || index >= images.length)
+        ? null
+        : index,
+    );
+  }, [images.length]);
+
+  useEffect(() => {
+    if (!activeImage) return;
 
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
@@ -38,7 +52,7 @@ export function DocsImagePreview({ images }: { images: DocsPreviewImage[] }) {
       document.body.style.overflow = previousOverflow;
       window.removeEventListener("keydown", handleKeydown);
     };
-  }, [activeIndex, images.length]);
+  }, [activeImage, images.length]);
 
   return (
     <>
