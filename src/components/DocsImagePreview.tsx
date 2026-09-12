@@ -14,8 +14,13 @@ export function DocsImagePreview({ images }: { images: DocsPreviewImage[] }) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
-  const activeImage = activeIndex === null ? null : images[activeIndex];
-  const isOpen = activeIndex !== null;
+  const hasValidActiveIndex =
+    activeIndex !== null &&
+    Number.isInteger(activeIndex) &&
+    activeIndex >= 0 &&
+    activeIndex < images.length;
+  const activeImage = hasValidActiveIndex ? images[activeIndex] : null;
+  const isOpen = activeImage !== null;
 
   function handleDialogKeydown(event: React.KeyboardEvent<HTMLDialogElement>) {
     if (event.key !== "Tab") return;
@@ -38,6 +43,15 @@ export function DocsImagePreview({ images }: { images: DocsPreviewImage[] }) {
   }
 
   useEffect(() => {
+    setActiveIndex((index) =>
+      index !== null &&
+      (!Number.isInteger(index) || index < 0 || index >= images.length)
+        ? null
+        : index,
+    );
+  }, [images.length]);
+
+  useEffect(() => {
     if (!isOpen) return;
 
     const dialog = dialogRef.current;
@@ -49,12 +63,16 @@ export function DocsImagePreview({ images }: { images: DocsPreviewImage[] }) {
     function handleKeydown(event: KeyboardEvent) {
       if (event.key === "ArrowRight") {
         setActiveIndex((index) =>
-          index === null ? index : (index + 1) % images.length
+          index === null || images.length === 0
+            ? null
+            : (index + 1) % images.length,
         );
       }
       if (event.key === "ArrowLeft") {
         setActiveIndex((index) =>
-          index === null ? index : (index - 1 + images.length) % images.length
+          index === null || images.length === 0
+            ? null
+            : (index - 1 + images.length) % images.length,
         );
       }
     }
