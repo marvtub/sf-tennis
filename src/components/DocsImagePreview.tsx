@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 export type DocsPreviewImage = {
   src: string;
@@ -11,16 +11,42 @@ export type DocsPreviewImage = {
 
 export function DocsImagePreview({ images }: { images: DocsPreviewImage[] }) {
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
   const activeImage = activeIndex === null ? null : images[activeIndex];
+  const isOpen = activeIndex !== null;
+
+  function handleDialogKeydown(event: React.KeyboardEvent<HTMLDialogElement>) {
+    if (event.key !== "Tab") return;
+
+    const controls = Array.from(
+      event.currentTarget.querySelectorAll<HTMLButtonElement>(
+        "button:not(:disabled)",
+      ),
+    );
+    const firstControl = controls[0];
+    const lastControl = controls.at(-1);
+
+    if (event.shiftKey && document.activeElement === firstControl) {
+      event.preventDefault();
+      lastControl?.focus();
+    } else if (!event.shiftKey && document.activeElement === lastControl) {
+      event.preventDefault();
+      firstControl?.focus();
+    }
+  }
 
   useEffect(() => {
-    if (activeIndex === null) return;
+    if (!isOpen) return;
 
+    const dialog = dialogRef.current;
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
+    dialog?.showModal();
+    closeButtonRef.current?.focus();
 
     function handleKeydown(event: KeyboardEvent) {
-      if (event.key === "Escape") setActiveIndex(null);
       if (event.key === "ArrowRight") {
         setActiveIndex((index) =>
           index === null ? index : (index + 1) % images.length
@@ -37,8 +63,10 @@ export function DocsImagePreview({ images }: { images: DocsPreviewImage[] }) {
     return () => {
       document.body.style.overflow = previousOverflow;
       window.removeEventListener("keydown", handleKeydown);
+      if (dialog?.open) dialog.close();
+      triggerRef.current?.focus();
     };
-  }, [activeIndex, images.length]);
+  }, [isOpen, images.length]);
 
   return (
     <>
@@ -47,7 +75,10 @@ export function DocsImagePreview({ images }: { images: DocsPreviewImage[] }) {
           <button
             key={image.src}
             type="button"
-            onClick={() => setActiveIndex(index)}
+            onClick={(event) => {
+              triggerRef.current = event.currentTarget;
+              setActiveIndex(index);
+            }}
             className="group block overflow-hidden rounded-lg border border-slate-200 bg-white text-left shadow-sm transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 dark:border-slate-800 dark:bg-slate-900 dark:hover:border-slate-700"
             aria-label={`${image.caption}. ${image.description} Open larger preview`}
           >
@@ -73,12 +104,16 @@ export function DocsImagePreview({ images }: { images: DocsPreviewImage[] }) {
       </div>
 
       {activeImage && activeIndex !== null && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/75 p-3 backdrop-blur-sm sm:p-6"
-          role="dialog"
-          aria-modal="true"
+        <dialog
+          ref={dialogRef}
+          className="fixed inset-0 z-50 m-0 h-full max-h-none w-full max-w-none items-center justify-center border-0 bg-transparent p-3 backdrop:bg-slate-950/75 backdrop:backdrop-blur-sm open:flex sm:p-6"
           aria-label={`${activeImage.caption} preview`}
           onClick={() => setActiveIndex(null)}
+          onKeyDown={handleDialogKeydown}
+          onCancel={(event) => {
+            event.preventDefault();
+            setActiveIndex(null);
+          }}
         >
           <div
             className="max-h-full w-full max-w-6xl overflow-hidden rounded-lg bg-white shadow-2xl dark:bg-slate-950"
@@ -94,6 +129,7 @@ export function DocsImagePreview({ images }: { images: DocsPreviewImage[] }) {
                 </p>
               </div>
               <button
+                ref={closeButtonRef}
                 type="button"
                 onClick={() => setActiveIndex(null)}
                 className="rounded-md px-2 py-1 text-sm font-medium text-slate-500 transition hover:bg-slate-100 hover:text-slate-950 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 dark:text-slate-400 dark:hover:bg-slate-900 dark:hover:text-white"
@@ -132,7 +168,7 @@ export function DocsImagePreview({ images }: { images: DocsPreviewImage[] }) {
               </button>
             </div>
           </div>
-        </div>
+        </dialog>
       )}
     </>
   );
