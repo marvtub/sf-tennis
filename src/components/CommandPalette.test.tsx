@@ -168,4 +168,44 @@ describe("CommandPalette keyboard handling", () => {
     expect(callbacks.onSelectCourt).toHaveBeenCalledWith("alice-marble");
     expect(callbacks.onClose).toHaveBeenCalledOnce();
   });
+
+  it("lets Enter invoke a focused mobile city without selecting a hidden court", async () => {
+    setDesktop(false);
+    const user = userEvent.setup();
+    const { container, callbacks } = renderPalette();
+    const mobileContent = container.querySelector<HTMLElement>(
+      ".sm\\:hidden.flex-1.overflow-y-auto",
+    );
+    expect(mobileContent).not.toBeNull();
+
+    await user.click(within(container).getByRole("button", { name: /SF/ }));
+    const mountainView = within(mobileContent!).getByRole("button", {
+      name: /Mountain View/,
+    });
+    mountainView.focus();
+    await user.keyboard("{Enter}");
+
+    expect(callbacks.onCityChange).toHaveBeenCalledOnce();
+    expect(callbacks.onCityChange).toHaveBeenCalledWith("mountain-view");
+    expect(callbacks.onSelectCourt).not.toHaveBeenCalled();
+    expect(callbacks.onClose).not.toHaveBeenCalled();
+  });
+
+  it("lets a focused desktop setting retain Arrow then native Enter", async () => {
+    setDesktop(true);
+    const user = userEvent.setup();
+    const { container, callbacks } = renderPalette();
+    const mountainView = Array.from(
+      container.querySelectorAll<HTMLButtonElement>("button[data-idx]"),
+    ).find((button) => button.textContent?.includes("Mountain View"));
+    expect(mountainView).toBeDefined();
+
+    mountainView!.focus();
+    await user.keyboard("{ArrowDown}{Enter}");
+
+    expect(callbacks.onCityChange).toHaveBeenCalledOnce();
+    expect(callbacks.onCityChange).toHaveBeenCalledWith("mountain-view");
+    expect(callbacks.onSelectCourt).not.toHaveBeenCalled();
+    expect(callbacks.onClose).not.toHaveBeenCalled();
+  });
 });
