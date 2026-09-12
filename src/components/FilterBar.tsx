@@ -20,7 +20,11 @@ export function FilterBar({ filter, onChange, availableDates }: FilterBarProps) 
   return (
     <div className="flex items-center gap-2 flex-wrap">
       {/* Day filter */}
+      <label className="sr-only" htmlFor="availability-filter-day">
+        Day
+      </label>
       <select
+        id="availability-filter-day"
         value={filter.date ?? ""}
         onChange={(e) =>
           onChange({ ...filter, date: e.target.value || null })
@@ -36,7 +40,11 @@ export function FilterBar({ filter, onChange, availableDates }: FilterBarProps) 
       </select>
 
       {/* Time from */}
+      <label className="sr-only" htmlFor="availability-filter-start-time">
+        Start time
+      </label>
       <select
+        id="availability-filter-start-time"
         value={filter.timeFrom ?? ""}
         onChange={(e) =>
           onChange({ ...filter, timeFrom: e.target.value || null })
@@ -54,7 +62,11 @@ export function FilterBar({ filter, onChange, availableDates }: FilterBarProps) 
       <span className="text-xs text-gray-400">–</span>
 
       {/* Time to */}
+      <label className="sr-only" htmlFor="availability-filter-end-time">
+        End time
+      </label>
       <select
+        id="availability-filter-end-time"
         value={filter.timeTo ?? ""}
         onChange={(e) =>
           onChange({ ...filter, timeTo: e.target.value || null })
