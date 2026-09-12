@@ -5,6 +5,12 @@ import type { CourtLocation, TravelTime } from "@/types";
 
 type SortMode = "distance" | "name";
 
+const AVAILABILITY_LABELS: Record<CourtLocation["availabilityStatus"], string> = {
+  available: "Available today",
+  later: "Available later this week",
+  full: "No availability this week",
+};
+
 interface LocationListProps {
   courts: CourtLocation[];
   travelTimes: Map<string, TravelTime>;
@@ -46,11 +52,15 @@ export function LocationList({
       {/* Search + Sort controls */}
       <div className="px-4 py-3 bg-white border-b space-y-2">
         <div className="relative">
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">
+          <span
+            aria-hidden="true"
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"
+          >
             🔍
           </span>
           <input
             type="text"
+            aria-label="Filter courts"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Filter courts..."
@@ -58,10 +68,12 @@ export function LocationList({
           />
           {search && (
             <button
+              type="button"
+              aria-label="Clear search"
               onClick={() => setSearch("")}
               className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-xs"
             >
-              ✕
+              <span aria-hidden="true">✕</span>
             </button>
           )}
         </div>
@@ -75,7 +87,7 @@ export function LocationList({
             active={sort === "distance"}
             onClick={() => setSort("distance")}
           >
-            📍 Distance
+            <span aria-hidden="true">📍</span> Distance
           </SortButton>
           <SortButton
             active={sort === "name"}
@@ -106,6 +118,8 @@ export function LocationList({
               return (
                 <button
                   key={court.id}
+                  type="button"
+                  aria-pressed={isSelected}
                   onClick={() => onSelectCourt(court.id)}
                   className={`w-full text-left px-4 py-3 transition-colors ${
                     isSelected
@@ -123,7 +137,11 @@ export function LocationList({
                           ? "bg-yellow-500"
                           : "bg-red-500"
                       }`}
-                    />
+                    >
+                      <span className="sr-only">
+                        {AVAILABILITY_LABELS[court.availabilityStatus]}
+                      </span>
+                    </span>
 
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
@@ -139,12 +157,12 @@ export function LocationList({
                       <div className="flex items-center gap-3 mt-1.5 text-xs text-gray-500">
                         {walkMin != null && (
                           <span className="flex items-center gap-1 px-1.5 py-0.5 bg-blue-50 text-blue-700 rounded">
-                            🚶 {walkMin} min
+                            <span aria-hidden="true">🚶</span> {walkMin} min
                           </span>
                         )}
                         {driveMin != null && (
                           <span className="flex items-center gap-1 px-1.5 py-0.5 bg-purple-50 text-purple-700 rounded">
-                            🚗 {driveMin} min
+                            <span aria-hidden="true">🚗</span> {driveMin} min
                           </span>
                         )}
                         <span
@@ -185,6 +203,8 @@ function SortButton({
 }) {
   return (
     <button
+      type="button"
+      aria-pressed={active}
       onClick={onClick}
       className={`px-2 py-1 text-xs rounded-md transition-colors ${
         active

@@ -36,18 +36,28 @@ export function MapView({
     zoom: cityConfig.zoom,
   });
 
-  // Re-center when user location resolves from geolocation
-  const [hasCentered, setHasCentered] = useState(userLocation.isDefault ? false : true);
-  if (!hasCentered && !userLocation.isDefault) {
+  // Re-center whenever geolocation resolves to a new position.
+  const [lastCenteredLocation, setLastCenteredLocation] = useState(
+    userLocation.isDefault
+      ? null
+      : { lat: userLocation.lat, lng: userLocation.lng }
+  );
+  const hasNewResolvedLocation =
+    !userLocation.isDefault &&
+    (lastCenteredLocation === null ||
+      lastCenteredLocation.lat !== userLocation.lat ||
+      lastCenteredLocation.lng !== userLocation.lng);
+  if (hasNewResolvedLocation) {
     setViewState((prev) => ({
       ...prev,
       latitude: userLocation.lat,
       longitude: userLocation.lng,
     }));
-    setHasCentered(true);
+    setLastCenteredLocation({ lat: userLocation.lat, lng: userLocation.lng });
   }
 
-  // Re-center when city changes
+  // Re-center when city changes. This runs last so a simultaneous city change
+  // keeps the newly selected city in view.
   const [lastCity, setLastCity] = useState(city);
   if (city !== lastCity) {
     const c = CITIES[city] ?? CITIES[DEFAULT_CITY];
@@ -85,9 +95,11 @@ export function MapView({
       <NavigationControl position="top-right" />
 
       {/* User location marker */}
-      <Marker latitude={userLocation.lat} longitude={userLocation.lng} anchor="center">
-        <HomePin />
-      </Marker>
+      {!userLocation.isDefault && (
+        <Marker latitude={userLocation.lat} longitude={userLocation.lng} anchor="center">
+          <HomePin />
+        </Marker>
+      )}
 
       {/* Court markers — each memoized, only re-render on its own prop changes */}
       {courts.map((loc) => (
