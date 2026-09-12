@@ -85,9 +85,11 @@ export function MapView({
       <NavigationControl position="top-right" />
 
       {/* User location marker */}
-      <Marker latitude={userLocation.lat} longitude={userLocation.lng} anchor="center">
-        <HomePin />
-      </Marker>
+      {!userLocation.isDefault && (
+        <Marker latitude={userLocation.lat} longitude={userLocation.lng} anchor="center">
+          <HomePin />
+        </Marker>
+      )}
 
       {/* Court markers — each memoized, only re-render on its own prop changes */}
       {courts.map((loc) => (
