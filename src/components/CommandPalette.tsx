@@ -177,7 +177,7 @@ export function CommandPalette({
           id: `filter-${d}`,
           label: formatDateLabel(d),
           active: filter.date === d,
-          filterValue: { ...filter, date: d },
+          filterValue: { ...filter, date: d, weekendOnly: false },
         });
       }
       result.push({
