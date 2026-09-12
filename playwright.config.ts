@@ -14,6 +14,10 @@ export default defineConfig({
   },
   webServer: {
     command: `npm run dev -- --hostname 127.0.0.1 --port ${port}`,
+    env: {
+      NEXT_PUBLIC_MAPBOX_TOKEN:
+        process.env.NEXT_PUBLIC_MAPBOX_TOKEN ?? "pk.test",
+    },
     url: `http://127.0.0.1:${port}/docs`,
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
