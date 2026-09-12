@@ -6,6 +6,9 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { DocsImagePreview, type DocsPreviewImage } from "./DocsImagePreview";
 
+(globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT: boolean })
+  .IS_REACT_ACT_ENVIRONMENT = true;
+
 const images: DocsPreviewImage[] = [
   {
     src: "/first.webp",
@@ -28,6 +31,20 @@ describe("DocsImagePreview", () => {
   beforeEach(() => {
     document.body.innerHTML = "";
     document.body.style.overflow = "auto";
+    Object.defineProperties(HTMLDialogElement.prototype, {
+      showModal: {
+        configurable: true,
+        value() {
+          this.setAttribute("open", "");
+        },
+      },
+      close: {
+        configurable: true,
+        value() {
+          this.removeAttribute("open");
+        },
+      },
+    });
     container = document.createElement("div");
     document.body.append(container);
     root = createRoot(container);
@@ -54,12 +71,12 @@ describe("DocsImagePreview", () => {
     render(images);
     open("Second image");
 
-    expect(container.querySelector('[role="dialog"]')).not.toBeNull();
+    expect(container.querySelector("dialog")).not.toBeNull();
     expect(document.body.style.overflow).toBe("hidden");
 
     render(images.slice(0, 1));
 
-    expect(container.querySelector('[role="dialog"]')).toBeNull();
+    expect(container.querySelector("dialog")).toBeNull();
     expect(document.body.style.overflow).toBe("auto");
   });
 
@@ -73,7 +90,7 @@ describe("DocsImagePreview", () => {
       window.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowLeft" }));
     });
 
-    expect(container.querySelector('[role="dialog"]')).toBeNull();
+    expect(container.querySelector("dialog")).toBeNull();
     expect(document.body.style.overflow).toBe("auto");
   });
 });
