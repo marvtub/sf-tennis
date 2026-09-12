@@ -57,6 +57,7 @@ export function CommandPalette({
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [isDesktop, setIsDesktop] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const mobileCloseRef = useRef<HTMLButtonElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const modalRef = useRef<HTMLDivElement>(null);
 
@@ -69,14 +70,8 @@ export function CommandPalette({
     return () => mq.removeEventListener("change", handler);
   }, []);
 
-  // Focus input on mount (desktop only — mobile keyboard would push content)
-  useEffect(() => {
-    if (isDesktop) {
-      inputRef.current?.focus();
-    }
-  }, [isDesktop]);
-
-  // Lock body scroll while open + restore focus on close
+  // Lock body scroll while open + restore focus on close.
+  // Capture the opener before moving focus into the modal.
   useEffect(() => {
     const previouslyFocused = document.activeElement as HTMLElement | null;
     const prevOverflow = document.body.style.overflow;
@@ -86,6 +81,16 @@ export function CommandPalette({
       previouslyFocused?.focus?.();
     };
   }, []);
+
+  // Focus the search on desktop. On mobile, focus Close without opening the
+  // software keyboard so the modal owns focus immediately at every viewport.
+  useEffect(() => {
+    if (isDesktop) {
+      inputRef.current?.focus();
+    } else {
+      mobileCloseRef.current?.focus();
+    }
+  }, [isDesktop]);
 
   // Focus trap: keep Tab navigation inside the modal
   useEffect(() => {
@@ -107,7 +112,10 @@ export function CommandPalette({
       if (focusables.length === 0) return;
       const first = focusables[0];
       const last = focusables[focusables.length - 1];
-      if (e.shiftKey && document.activeElement === first) {
+      if (!modalRef.current.contains(document.activeElement)) {
+        e.preventDefault();
+        (e.shiftKey ? last : first).focus();
+      } else if (e.shiftKey && document.activeElement === first) {
         e.preventDefault();
         last.focus();
       } else if (!e.shiftKey && document.activeElement === last) {
@@ -318,6 +326,7 @@ export function CommandPalette({
         <div className="flex items-center gap-2 px-4 py-3 border-b flex-shrink-0">
           {/* Mobile: close button */}
           <button
+            ref={mobileCloseRef}
             onClick={onClose}
             aria-label="Close"
             className="sm:hidden -ml-1 w-10 h-10 flex items-center justify-center text-gray-500 text-xl"
