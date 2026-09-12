@@ -208,4 +208,45 @@ describe("CommandPalette keyboard handling", () => {
     expect(callbacks.onSelectCourt).not.toHaveBeenCalled();
     expect(callbacks.onClose).not.toHaveBeenCalled();
   });
+
+  it("clears Weekend when a desktop date button is activated", async () => {
+    setDesktop(true);
+    const user = userEvent.setup();
+    const onFilterChange = vi.fn();
+    const { container } = render(
+      <CommandPalette
+        courts={courts}
+        travelTimes={new Map()}
+        sport="tennis"
+        city="sf"
+        filter={{
+          date: null,
+          weekendOnly: true,
+          timeFrom: "12:00",
+          timeTo: "17:00",
+        }}
+        availableDates={["2026-09-14"]}
+        userLocationStatus="idle"
+        onSelectCourt={vi.fn()}
+        onSportChange={vi.fn()}
+        onCityChange={vi.fn()}
+        onFilterChange={onFilterChange}
+        onRequestLocation={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    );
+    const dateButton = Array.from(
+      container.querySelectorAll<HTMLButtonElement>("button[data-idx]"),
+    ).find((button) => button.textContent?.includes("Mon, Sep 14"));
+    expect(dateButton).toBeDefined();
+
+    await user.click(dateButton!);
+
+    expect(onFilterChange).toHaveBeenCalledWith({
+      date: "2026-09-14",
+      weekendOnly: false,
+      timeFrom: "12:00",
+      timeTo: "17:00",
+    });
+  });
 });
