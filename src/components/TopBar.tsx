@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useRef, useState, type KeyboardEvent } from "react";
 import { TimeSince } from "./TimeSince";
 import type { Sport, CityId } from "@/lib/constants";
 import { CITIES } from "@/lib/constants";
@@ -36,6 +36,8 @@ export function TopBar({
   onShowSearch,
 }: TopBarProps) {
   const [showMenu, setShowMenu] = useState(false);
+  const menuId = useId();
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
   const cityConfig = CITIES[city];
   const sportEmoji = sport === "tennis" ? "🎾" : "🏓";
   const sportLabel = sport === "tennis" ? "Tennis" : "Pickleball";
@@ -49,6 +51,15 @@ export function TopBar({
       : userLocationStatus === "unsupported"
       ? "Location unavailable"
       : "Use my location";
+
+  const handleMenuKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.key !== "Escape" || !showMenu) return;
+
+    event.preventDefault();
+    event.stopPropagation();
+    setShowMenu(false);
+    menuButtonRef.current?.focus();
+  };
 
   return (
     <div className="absolute top-0 left-0 right-0 z-10 bg-white/90 backdrop-blur-sm border-b shadow-sm">
@@ -135,10 +146,13 @@ export function TopBar({
           </button>
 
           {/* Menu button */}
-          <div className="relative">
+          <div className="relative" onKeyDown={handleMenuKeyDown}>
             <button
+              ref={menuButtonRef}
               onClick={() => setShowMenu(!showMenu)}
               aria-label="Menu"
+              aria-expanded={showMenu}
+              aria-controls={menuId}
               className="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded transition-colors"
             >
               ☰
@@ -150,7 +164,10 @@ export function TopBar({
                   className="fixed inset-0 z-[55]"
                   onClick={() => setShowMenu(false)}
                 />
-                <div className="absolute right-0 top-8 z-[60] bg-white rounded-lg shadow-xl border py-1 w-48">
+                <div
+                  id={menuId}
+                  className="absolute right-0 top-8 z-[60] bg-white rounded-lg shadow-xl border py-1 w-48"
+                >
                   <MenuLink href="/docs">Docs</MenuLink>
                 </div>
               </>
