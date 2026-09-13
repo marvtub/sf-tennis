@@ -953,9 +953,10 @@ function formatDateLabel(dateStr: string): string {
   });
   if (dateStr === today) return "Today";
 
-  const tomorrow = new Date(Date.now() + 86400000).toLocaleDateString("en-CA", {
-    timeZone: "America/Los_Angeles",
-  });
+  const [year, month, day] = today.split("-").map(Number);
+  const tomorrow = new Date(Date.UTC(year, month - 1, day + 1))
+    .toISOString()
+    .slice(0, 10);
   if (dateStr === tomorrow) return "Tomorrow";
 
   const date = new Date(dateStr + "T12:00:00-07:00");

@@ -92,6 +92,7 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
+  vi.useRealTimers();
   vi.restoreAllMocks();
 });
 
@@ -209,6 +210,40 @@ describe("CommandPalette keyboard handling", () => {
     expect(callbacks.onClose).not.toHaveBeenCalled();
   });
 
+  it("labels the next Los Angeles calendar date as Tomorrow after fall-back", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-11-01T07:30:00.000Z"));
+    setDesktop(true);
+
+    const { container } = render(
+      <CommandPalette
+        courts={courts}
+        travelTimes={new Map()}
+        sport="tennis"
+        city="sf"
+        filter={{
+          date: null,
+          weekendOnly: false,
+          timeFrom: null,
+          timeTo: null,
+        }}
+        availableDates={["2026-11-02"]}
+        userLocationStatus="idle"
+        onSelectCourt={vi.fn()}
+        onSportChange={vi.fn()}
+        onCityChange={vi.fn()}
+        onFilterChange={vi.fn()}
+        onRequestLocation={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    );
+
+    const tomorrowButton = Array.from(
+      container.querySelectorAll<HTMLButtonElement>("button[data-idx]"),
+    ).find((button) => button.textContent?.includes("Tomorrow"));
+    expect(tomorrowButton).toBeDefined();
+  });
+
   it("clears Weekend when a desktop date button is activated", async () => {
     setDesktop(true);
     const user = userEvent.setup();
@@ -225,7 +260,7 @@ describe("CommandPalette keyboard handling", () => {
           timeFrom: "12:00",
           timeTo: "17:00",
         }}
-        availableDates={["2026-09-14"]}
+        availableDates={["2020-09-14"]}
         userLocationStatus="idle"
         onSelectCourt={vi.fn()}
         onSportChange={vi.fn()}
@@ -243,7 +278,7 @@ describe("CommandPalette keyboard handling", () => {
     await user.click(dateButton!);
 
     expect(onFilterChange).toHaveBeenCalledWith({
-      date: "2026-09-14",
+      date: "2020-09-14",
       weekendOnly: false,
       timeFrom: "12:00",
       timeTo: "17:00",
