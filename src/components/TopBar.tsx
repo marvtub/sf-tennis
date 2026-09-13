@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { TimeSince } from "./TimeSince";
 import type { Sport, CityId } from "@/lib/constants";
 import { CITIES } from "@/lib/constants";
@@ -36,6 +36,7 @@ export function TopBar({
   onShowSearch,
 }: TopBarProps) {
   const [showMenu, setShowMenu] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
   const cityConfig = CITIES[city];
   const sportEmoji = sport === "tennis" ? "🎾" : "🏓";
   const sportLabel = sport === "tennis" ? "Tennis" : "Pickleball";
@@ -49,6 +50,21 @@ export function TopBar({
       : userLocationStatus === "unsupported"
       ? "Location unavailable"
       : "Use my location";
+
+  useEffect(() => {
+    if (!showMenu) return;
+
+    function handleOutsideClick(event: MouseEvent) {
+      if (menuRef.current?.contains(event.target as Node)) return;
+
+      event.preventDefault();
+      event.stopPropagation();
+      setShowMenu(false);
+    }
+
+    document.addEventListener("click", handleOutsideClick, true);
+    return () => document.removeEventListener("click", handleOutsideClick, true);
+  }, [showMenu]);
 
   return (
     <div className="absolute top-0 left-0 right-0 z-10 bg-white/90 backdrop-blur-sm border-b shadow-sm">
@@ -135,7 +151,7 @@ export function TopBar({
           </button>
 
           {/* Menu button */}
-          <div className="relative">
+          <div ref={menuRef} className="relative">
             <button
               onClick={() => setShowMenu(!showMenu)}
               aria-label="Menu"
@@ -145,15 +161,9 @@ export function TopBar({
             </button>
 
             {showMenu && (
-              <>
-                <div
-                  className="fixed inset-0 z-[55]"
-                  onClick={() => setShowMenu(false)}
-                />
-                <div className="absolute right-0 top-8 z-[60] bg-white rounded-lg shadow-xl border py-1 w-48">
-                  <MenuLink href="/docs">Docs</MenuLink>
-                </div>
-              </>
+              <div className="absolute right-0 top-8 z-[60] bg-white rounded-lg shadow-xl border py-1 w-48">
+                <MenuLink href="/docs">Docs</MenuLink>
+              </div>
             )}
           </div>
         </div>
