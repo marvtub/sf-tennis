@@ -61,6 +61,7 @@ function CourtPinInner({
 export const CourtPin = memo(CourtPinInner, (prev, next) => {
   return (
     prev.location.id === next.location.id &&
+    prev.location.name === next.location.name &&
     prev.location.availabilityStatus === next.location.availabilityStatus &&
     prev.isSelected === next.isSelected &&
     prev.onClick === next.onClick
