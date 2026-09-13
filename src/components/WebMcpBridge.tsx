@@ -11,13 +11,45 @@ type WebMcpTool = {
 
 type ModelContextApi = {
   provideTools?: (tools: WebMcpTool[]) => unknown;
+  clearTools?: () => unknown;
   provideContext?: (context: {
     name: string;
     description: string;
     tools: WebMcpTool[];
   }) => unknown;
-  registerTool?: (tool: WebMcpTool) => unknown;
+  clearContext?: () => unknown;
+  registerTool?: (
+    tool: WebMcpTool,
+    options?: { signal?: AbortSignal },
+  ) => unknown;
+  unregisterTool?: (name: string) => unknown;
 };
+
+function runRegistrationCleanup(handle: unknown): boolean {
+  if (typeof handle === "function") {
+    handle();
+    return true;
+  }
+
+  if (!handle || typeof handle !== "object") return false;
+
+  const registration = handle as {
+    unregister?: unknown;
+    dispose?: unknown;
+  };
+
+  if (typeof registration.unregister === "function") {
+    registration.unregister.call(handle);
+    return true;
+  }
+
+  if (typeof registration.dispose === "function") {
+    registration.dispose.call(handle);
+    return true;
+  }
+
+  return false;
+}
 
 function asChoice(value: unknown, fallback: string, allowed: string[]): string {
   return typeof value === "string" && allowed.includes(value) ? value : fallback;
@@ -65,22 +97,64 @@ export function WebMcpBridge() {
     ];
 
     if (typeof modelContext.provideTools === "function") {
-      modelContext.provideTools(tools);
-      return;
+      const registration = modelContext.provideTools(tools);
+      return () => {
+        if (runRegistrationCleanup(registration)) return;
+        if (typeof modelContext.clearTools === "function") {
+          modelContext.clearTools();
+          return;
+        }
+        modelContext.provideTools?.([]);
+      };
     }
 
     if (typeof modelContext.provideContext === "function") {
-      modelContext.provideContext({
+      const context = {
         name: "SF Tennis",
         description:
           "Live public tennis and pickleball availability with API docs.",
         tools,
-      });
-      return;
+      };
+      const registration = modelContext.provideContext(context);
+      return () => {
+        if (runRegistrationCleanup(registration)) return;
+        if (typeof modelContext.clearContext === "function") {
+          modelContext.clearContext();
+          return;
+        }
+        modelContext.provideContext?.({ ...context, tools: [] });
+      };
     }
 
     if (typeof modelContext.registerTool === "function") {
-      tools.forEach((tool) => modelContext.registerTool?.(tool));
+      const registrations = tools.map((tool) => {
+        const controller = new AbortController();
+        const handle = modelContext.registerTool?.(tool, {
+          signal: controller.signal,
+        });
+        void Promise.resolve(handle).catch((error: unknown) => {
+          if (!controller.signal.aborted) {
+            console.warn(`Unable to register WebMCP tool "${tool.name}"`, error);
+          }
+        });
+
+        return {
+          controller,
+          handle,
+          tool,
+        };
+      });
+
+      return () => {
+        registrations.forEach(({ controller, handle, tool }) => {
+          if (runRegistrationCleanup(handle)) return;
+          if (typeof modelContext.unregisterTool === "function") {
+            modelContext.unregisterTool(tool.name);
+            return;
+          }
+          controller.abort();
+        });
+      };
     }
   }, []);
 
