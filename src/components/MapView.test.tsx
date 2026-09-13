@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { UserLocation } from "@/hooks/useUserLocation";
 import { CITIES } from "@/lib/constants";
+import type { CourtLocation } from "@/types";
 import { MapView } from "./MapView";
 
 (globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT: boolean })
@@ -32,6 +33,7 @@ vi.mock("react-map-gl/mapbox", () => ({
 describe("MapView location behavior", () => {
   let container: HTMLDivElement;
   let root: Root;
+  const onSelectCourt = vi.fn();
 
   beforeEach(() => {
     container = document.createElement("div");
@@ -44,13 +46,16 @@ describe("MapView location behavior", () => {
     container.remove();
   });
 
-  async function renderWithLocation(userLocation: UserLocation) {
+  async function renderWithLocation(
+    userLocation: UserLocation,
+    courts: CourtLocation[] = [],
+  ) {
     await act(async () => {
       root.render(
         <MapView
-          courts={[]}
+          courts={courts}
           selectedId={null}
-          onSelectCourt={() => {}}
+          onSelectCourt={onSelectCourt}
           travelTimes={new Map()}
           mapboxToken="test-token"
           userLocation={userLocation}
@@ -97,5 +102,42 @@ describe("MapView location behavior", () => {
       isDefault: true,
     });
     expect(container.querySelector('[aria-label="Home"]')).toBeNull();
+  });
+
+  it("updates a court marker's accessible name when its name changes", async () => {
+    const court: CourtLocation = {
+      id: "court-1",
+      name: "Old court name",
+      lat: 37.78,
+      lng: -122.42,
+      address: "",
+      hoursOfOperation: "",
+      accessInfo: "",
+      gettingThereInfo: "",
+      imageUrl: null,
+      courts: [],
+      availabilityStatus: "available",
+      totalSlotsToday: 1,
+      totalSlotsWeek: 1,
+    };
+    const defaultLocation = {
+      lat: CITIES.sf.lat,
+      lng: CITIES.sf.lng,
+      isDefault: true,
+    };
+
+    await renderWithLocation(defaultLocation, [court]);
+    expect(
+      container.querySelector('[aria-label="Old court name: Available today"]'),
+    ).not.toBeNull();
+
+    await renderWithLocation(defaultLocation, [
+      { ...court, name: "Updated court name" },
+    ]);
+    expect(
+      container.querySelector(
+        '[aria-label="Updated court name: Available today"]',
+      ),
+    ).not.toBeNull();
   });
 });

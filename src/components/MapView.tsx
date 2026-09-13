@@ -163,6 +163,7 @@ const CourtMarker = memo(
   (prev, next) => {
     return (
       prev.location.id === next.location.id &&
+      prev.location.name === next.location.name &&
       prev.location.availabilityStatus === next.location.availabilityStatus &&
       prev.location.lat === next.location.lat &&
       prev.location.lng === next.location.lng &&
