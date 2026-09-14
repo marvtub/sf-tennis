@@ -73,7 +73,8 @@ export default function HomePage() {
     function handleKey(e: KeyboardEvent) {
       if ((e.metaKey || e.ctrlKey) && e.key === "k") {
         e.preventDefault();
-        setShowSearch((s) => !s);
+        if (e.repeat) return;
+        setShowSearch(true);
       }
     }
     window.addEventListener("keydown", handleKey);
