@@ -33,7 +33,6 @@ vi.mock("react-map-gl/mapbox", () => ({
 describe("MapView location behavior", () => {
   let container: HTMLDivElement;
   let root: Root;
-  const onSelectCourt = vi.fn();
 
   beforeEach(() => {
     container = document.createElement("div");
@@ -46,16 +45,13 @@ describe("MapView location behavior", () => {
     container.remove();
   });
 
-  async function renderWithLocation(
-    userLocation: UserLocation,
-    courts: CourtLocation[] = [],
-  ) {
+  async function renderWithLocation(userLocation: UserLocation) {
     await act(async () => {
       root.render(
         <MapView
-          courts={courts}
+          courts={[]}
           selectedId={null}
-          onSelectCourt={onSelectCourt}
+          onSelectCourt={() => {}}
           travelTimes={new Map()}
           mapboxToken="test-token"
           userLocation={userLocation}
@@ -104,11 +100,13 @@ describe("MapView location behavior", () => {
     expect(container.querySelector('[aria-label="Home"]')).toBeNull();
   });
 
-  it("updates a court marker's accessible name when its name changes", async () => {
+  it("renames the right keyed marker without leaving a stale accessible name", async () => {
+    const onSelectCourt = vi.fn();
+    const travelTimes = new Map();
     const court: CourtLocation = {
       id: "court-1",
-      name: "Old court name",
-      lat: 37.78,
+      name: "Old name",
+      lat: 37.77,
       lng: -122.42,
       address: "",
       hoursOfOperation: "",
@@ -120,24 +118,59 @@ describe("MapView location behavior", () => {
       totalSlotsToday: 1,
       totalSlotsWeek: 1,
     };
-    const defaultLocation = {
+    const neighbor: CourtLocation = {
+      ...court,
+      id: "court-2",
+      name: "Neighbor",
+      lat: 37.78,
+    };
+    const userLocation: UserLocation = {
       lat: CITIES.sf.lat,
       lng: CITIES.sf.lng,
       isDefault: true,
     };
 
-    await renderWithLocation(defaultLocation, [court]);
-    expect(
-      container.querySelector('[aria-label="Old court name: Available today"]'),
-    ).not.toBeNull();
+    async function renderWithCourts(courts: CourtLocation[]) {
+      await act(async () => {
+        root.render(
+          <MapView
+            courts={courts}
+            selectedId={null}
+            onSelectCourt={onSelectCourt}
+            travelTimes={travelTimes}
+            mapboxToken="test-token"
+            userLocation={userLocation}
+            city="sf"
+          />,
+        );
+      });
+    }
 
-    await renderWithLocation(defaultLocation, [
-      { ...court, name: "Updated court name" },
-    ]);
+    function getMarkerButton(accessibleName: string) {
+      const button = Array.from(
+        container.querySelectorAll<HTMLButtonElement>("button"),
+      ).find((candidate) => candidate.getAttribute("aria-label") === accessibleName);
+      if (!button) throw new Error(`Missing marker: ${accessibleName}`);
+      return button;
+    }
+
+    await renderWithCourts([court, neighbor]);
+    const originalButton = getMarkerButton("Old name: Available today");
+    const neighborButton = getMarkerButton("Neighbor: Available today");
+
+    // Reorder the array while changing only court-1's name. Stable callbacks,
+    // status, coordinates, and ids force the CourtMarker and CourtPin name
+    // comparator paths; keyed identity must not cross the two markers.
+    await renderWithCourts([neighbor, { ...court, name: "New name" }]);
+
+    const renamedButton = getMarkerButton("New name: Available today");
+    expect(renamedButton).toBe(originalButton);
+    expect(getMarkerButton("Neighbor: Available today")).toBe(neighborButton);
     expect(
-      container.querySelector(
-        '[aria-label="Updated court name: Available today"]',
-      ),
-    ).not.toBeNull();
+      container.querySelector('[aria-label="Old name: Available today"]'),
+    ).toBeNull();
+
+    renamedButton.click();
+    expect(onSelectCourt).toHaveBeenLastCalledWith("court-1");
   });
 });
