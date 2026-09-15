@@ -40,7 +40,13 @@ export function LocationList({
       : courts;
 
     return [...filtered].sort((a, b) => {
-      if (sort === "name") return a.name.localeCompare(b.name);
+      if (sort === "name") {
+        const aName = a.name ?? "";
+        const bName = b.name ?? "";
+        if (!aName) return bName ? 1 : 0;
+        if (!bName) return -1;
+        return aName.localeCompare(bName);
+      }
       const aDist = travelTimes.get(a.id)?.walking?.durationMinutes ?? 999;
       const bDist = travelTimes.get(b.id)?.walking?.durationMinutes ?? 999;
       return aDist - bDist;
