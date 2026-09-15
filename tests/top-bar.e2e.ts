@@ -20,6 +20,13 @@ test("closes the menu when the page below the top bar is clicked", async ({
   await expect(docsLink).toHaveCount(0);
 
   await page.getByRole("button", { name: "Menu" }).click();
+  await page.getByRole("button", { name: "Switch to list view" }).click();
+  await expect(docsLink).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: "Switch to map view" }),
+  ).toBeVisible();
+
+  await page.getByRole("button", { name: "Menu" }).click();
   await page.getByRole("link", { name: "Docs" }).click();
   await expect(page).toHaveURL(/\/docs$/);
 });

@@ -1,5 +1,39 @@
 import { expect, test } from "@playwright/test";
 
+test("stays open when the keyboard shortcut auto-repeats", async ({ page }) => {
+  await page.route("**/api/courts?**", (route) =>
+    route.fulfill({
+      contentType: "application/json",
+      body: JSON.stringify({ courts: [], fetchedAt: null }),
+    }),
+  );
+  await page.goto("/");
+
+  const opener = page.locator('button[aria-label="Search courts"]:visible');
+  const dialog = page.getByRole("dialog", {
+    name: "Search and filter courts",
+  });
+  await opener.click();
+  await expect(dialog).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(dialog).toHaveCount(0);
+
+  await page.keyboard.press("Control+k");
+  await expect(dialog).toBeVisible();
+
+  await page.evaluate(() => {
+    window.dispatchEvent(
+      new KeyboardEvent("keydown", {
+        key: "k",
+        ctrlKey: true,
+        repeat: true,
+      }),
+    );
+  });
+
+  await expect(dialog).toBeVisible();
+});
+
 test("keeps keyboard focus inside the command palette", async ({ page }) => {
   await page.route("**/api/courts?**", (route) =>
     route.fulfill({

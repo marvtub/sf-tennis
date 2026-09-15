@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { UserLocation } from "@/hooks/useUserLocation";
 import { CITIES } from "@/lib/constants";
+import type { CourtLocation } from "@/types";
 import { MapView } from "./MapView";
 
 (globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT: boolean })
@@ -97,5 +98,56 @@ describe("MapView location behavior", () => {
       isDefault: true,
     });
     expect(container.querySelector('[aria-label="Home"]')).toBeNull();
+  });
+
+  it("updates a court marker label when the court name changes", async () => {
+    const onSelectCourt = vi.fn();
+    const travelTimes = new Map();
+    const court: CourtLocation = {
+      id: "1",
+      name: "Old name",
+      lat: 37.77,
+      lng: -122.42,
+      address: "",
+      hoursOfOperation: "",
+      accessInfo: "",
+      gettingThereInfo: "",
+      imageUrl: null,
+      courts: [],
+      availabilityStatus: "available",
+      totalSlotsToday: 1,
+      totalSlotsWeek: 1,
+    };
+    const userLocation: UserLocation = {
+      lat: CITIES.sf.lat,
+      lng: CITIES.sf.lng,
+      isDefault: true,
+    };
+
+    async function renderWithCourts(courts: CourtLocation[]) {
+      await act(async () => {
+        root.render(
+          <MapView
+            courts={courts}
+            selectedId={null}
+            onSelectCourt={onSelectCourt}
+            travelTimes={travelTimes}
+            mapboxToken="test-token"
+            userLocation={userLocation}
+            city="sf"
+          />,
+        );
+      });
+    }
+
+    await renderWithCourts([court]);
+    expect(container.querySelector("button")?.getAttribute("aria-label")).toBe(
+      "Old name: Available today",
+    );
+
+    await renderWithCourts([{ ...court, name: "New name" }]);
+    expect(container.querySelector("button")?.getAttribute("aria-label")).toBe(
+      "New name: Available today",
+    );
   });
 });

@@ -3,7 +3,10 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { CourtLocation, TravelTime } from "@/types";
 
-const state = vi.hoisted(() => ({ search: "" }));
+const state = vi.hoisted(() => ({
+  search: "",
+  sort: "distance" as "distance" | "name",
+}));
 
 vi.mock("react", async () => {
   const actual = await vi.importActual<typeof import("react")>("react");
@@ -11,7 +14,14 @@ vi.mock("react", async () => {
   return {
     ...actual,
     useMemo: (factory: () => unknown) => factory(),
-    useState: (initial: unknown) => [initial === "" ? state.search : initial, vi.fn()],
+    useState: (initial: unknown) => [
+      initial === ""
+        ? state.search
+        : initial === "distance"
+          ? state.sort
+          : initial,
+      vi.fn(),
+    ],
   };
 });
 
@@ -65,10 +75,13 @@ const courts: CourtLocation[] = [
   },
 ];
 
-function renderList(selectedId: string | null = "later-court") {
+function renderList(
+  selectedId: string | null = "later-court",
+  locations = courts,
+) {
   return renderToStaticMarkup(
     <LocationList
-      courts={courts}
+      courts={locations}
       travelTimes={new Map<string, TravelTime>()}
       onSelectCourt={() => {}}
       selectedId={selectedId}
@@ -121,5 +134,24 @@ describe("LocationList accessibility", () => {
     expect(markup).toContain("Available today");
     expect(markup).toContain("Available later this week");
     expect(markup).toContain("No availability this week");
+  });
+});
+
+describe("LocationList sorting", () => {
+  it("places unnamed courts after named courts when sorting by name", () => {
+    state.search = "";
+    state.sort = "name";
+    const unnamedCourt = {
+      ...courts[0],
+      id: "unnamed-court",
+      name: undefined,
+      address: "Unnamed court address",
+    } as unknown as CourtLocation;
+
+    const markup = renderList(null, [courts[0], unnamedCourt]);
+
+    expect(markup.indexOf("Available Court")).toBeLessThan(
+      markup.indexOf("Unnamed court address"),
+    );
   });
 });
