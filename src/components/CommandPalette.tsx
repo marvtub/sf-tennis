@@ -57,6 +57,7 @@ export function CommandPalette({
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [isDesktop, setIsDesktop] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const mobileCloseRef = useRef<HTMLButtonElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const modalRef = useRef<HTMLDivElement>(null);
 
@@ -69,14 +70,8 @@ export function CommandPalette({
     return () => mq.removeEventListener("change", handler);
   }, []);
 
-  // Focus input on mount (desktop only — mobile keyboard would push content)
-  useEffect(() => {
-    if (isDesktop) {
-      inputRef.current?.focus();
-    }
-  }, [isDesktop]);
-
-  // Lock body scroll while open + restore focus on close
+  // Lock body scroll while open + restore focus on close.
+  // Capture the opener before moving focus into the modal.
   useEffect(() => {
     const previouslyFocused = document.activeElement as HTMLElement | null;
     const prevOverflow = document.body.style.overflow;
@@ -87,17 +82,40 @@ export function CommandPalette({
     };
   }, []);
 
+  // Focus the search on desktop. On mobile, focus Close without opening the
+  // software keyboard so the modal owns focus immediately at every viewport.
+  useEffect(() => {
+    if (isDesktop) {
+      inputRef.current?.focus();
+    } else {
+      mobileCloseRef.current?.focus();
+    }
+  }, [isDesktop]);
+
   // Focus trap: keep Tab navigation inside the modal
   useEffect(() => {
     function handleTab(e: KeyboardEvent) {
       if (e.key !== "Tab" || !modalRef.current) return;
-      const focusables = modalRef.current.querySelectorAll<HTMLElement>(
-        'button, [href], input, [tabindex]:not([tabindex="-1"])'
-      );
+      const focusables = Array.from(
+        modalRef.current.querySelectorAll<HTMLElement>(
+          'button, [href], input, [tabindex]:not([tabindex="-1"])'
+        )
+      ).filter((element) => {
+        const style = window.getComputedStyle(element);
+        return (
+          !element.matches(":disabled") &&
+          style.display !== "none" &&
+          style.visibility === "visible" &&
+          element.getClientRects().length > 0
+        );
+      });
       if (focusables.length === 0) return;
       const first = focusables[0];
       const last = focusables[focusables.length - 1];
-      if (e.shiftKey && document.activeElement === first) {
+      if (!modalRef.current.contains(document.activeElement)) {
+        e.preventDefault();
+        (e.shiftKey ? last : first).focus();
+      } else if (e.shiftKey && document.activeElement === first) {
         e.preventDefault();
         last.focus();
       } else if (!e.shiftKey && document.activeElement === last) {
@@ -177,7 +195,7 @@ export function CommandPalette({
           id: `filter-${d}`,
           label: formatDateLabel(d),
           active: filter.date === d,
-          filterValue: { ...filter, date: d },
+          filterValue: { ...filter, date: d, weekendOnly: false },
         });
       }
       result.push({
@@ -253,16 +271,27 @@ export function CommandPalette({
   // Keyboard navigation (desktop)
   useEffect(() => {
     function handleKey(e: KeyboardEvent) {
-      if (e.key === "Escape") {
+      const target = e.target instanceof Element ? e.target : null;
+      const action = getCommandKeyboardAction({
+        key: e.key,
+        isDesktop,
+        isCommandScope:
+          e.target === inputRef.current ||
+          Boolean(target && listRef.current?.contains(target)),
+        isNativeButton: Boolean(target?.closest("button")),
+        hasItems: desktopItems.length > 0,
+      });
+
+      if (action === "close") {
         e.preventDefault();
         onClose();
-      } else if (e.key === "ArrowDown") {
+      } else if (action === "next") {
         e.preventDefault();
         setSelectedIndex((i) => Math.min(i + 1, desktopItems.length - 1));
-      } else if (e.key === "ArrowUp") {
+      } else if (action === "previous") {
         e.preventDefault();
         setSelectedIndex((i) => Math.max(i - 1, 0));
-      } else if (e.key === "Enter" && desktopItems.length > 0) {
+      } else if (action === "select") {
         e.preventDefault();
         handleSelect(desktopItems[selectedIndex]);
       }
@@ -270,7 +299,7 @@ export function CommandPalette({
 
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
-  }, [desktopItems, selectedIndex, onClose, handleSelect]);
+  }, [desktopItems, selectedIndex, isDesktop, onClose, handleSelect]);
 
   return (
     <div
@@ -297,6 +326,7 @@ export function CommandPalette({
         <div className="flex items-center gap-2 px-4 py-3 border-b flex-shrink-0">
           {/* Mobile: close button */}
           <button
+            ref={mobileCloseRef}
             onClick={onClose}
             aria-label="Close"
             className="sm:hidden -ml-1 w-10 h-10 flex items-center justify-center text-gray-500 text-xl"
@@ -433,6 +463,30 @@ export function CommandPalette({
       </div>
     </div>
   );
+}
+
+type CommandKeyboardAction = "close" | "next" | "previous" | "select";
+
+export function getCommandKeyboardAction({
+  key,
+  isDesktop,
+  isCommandScope,
+  isNativeButton,
+  hasItems,
+}: {
+  key: string;
+  isDesktop: boolean;
+  isCommandScope: boolean;
+  isNativeButton: boolean;
+  hasItems: boolean;
+}): CommandKeyboardAction | null {
+  if (key === "Escape") return "close";
+  if (!isDesktop || !isCommandScope) return null;
+  if (isNativeButton) return null;
+  if (key === "ArrowDown") return "next";
+  if (key === "ArrowUp") return "previous";
+  if (key === "Enter" && hasItems) return "select";
+  return null;
 }
 
 // ── Mobile tab content ──
@@ -780,6 +834,7 @@ function DesktopSettingRow({
       data-idx={idx}
       onClick={onSelect}
       onMouseEnter={onHover}
+      onFocus={onHover}
       className={`w-full text-left px-4 py-2 flex items-center justify-between text-sm transition-colors ${
         isSelected ? "bg-blue-50" : "hover:bg-gray-50"
       }`}
@@ -815,6 +870,7 @@ function DesktopCourtRow({
       data-idx={idx}
       onClick={onSelect}
       onMouseEnter={onHover}
+      onFocus={onHover}
       className={`w-full text-left px-4 py-2.5 flex items-center gap-3 transition-colors ${
         isSelected ? "bg-blue-50" : "hover:bg-gray-50"
       }`}
@@ -897,9 +953,10 @@ function formatDateLabel(dateStr: string): string {
   });
   if (dateStr === today) return "Today";
 
-  const tomorrow = new Date(Date.now() + 86400000).toLocaleDateString("en-CA", {
-    timeZone: "America/Los_Angeles",
-  });
+  const [year, month, day] = today.split("-").map(Number);
+  const tomorrow = new Date(Date.UTC(year, month - 1, day + 1))
+    .toISOString()
+    .slice(0, 10);
   if (dateStr === tomorrow) return "Tomorrow";
 
   const date = new Date(dateStr + "T12:00:00-07:00");

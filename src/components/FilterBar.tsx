@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useId, useMemo } from "react";
 import type { AvailabilityFilter } from "@/types";
 
 interface FilterBarProps {
@@ -10,6 +10,10 @@ interface FilterBarProps {
 }
 
 export function FilterBar({ filter, onChange, availableDates }: FilterBarProps) {
+  const reactId = useId();
+  const dayId = `availability-filter-${reactId}-day`;
+  const startTimeId = `availability-filter-${reactId}-start-time`;
+  const endTimeId = `availability-filter-${reactId}-end-time`;
   const dateOptions = useMemo(() => {
     return availableDates.map((d) => ({
       value: d,
@@ -20,11 +24,11 @@ export function FilterBar({ filter, onChange, availableDates }: FilterBarProps) 
   return (
     <div className="flex items-center gap-2 flex-wrap">
       {/* Day filter */}
-      <label className="sr-only" htmlFor="availability-filter-day">
+      <label className="sr-only" htmlFor={dayId}>
         Day
       </label>
       <select
-        id="availability-filter-day"
+        id={dayId}
         value={filter.date ?? ""}
         onChange={(e) =>
           onChange({ ...filter, date: e.target.value || null })
@@ -40,11 +44,11 @@ export function FilterBar({ filter, onChange, availableDates }: FilterBarProps) 
       </select>
 
       {/* Time from */}
-      <label className="sr-only" htmlFor="availability-filter-start-time">
+      <label className="sr-only" htmlFor={startTimeId}>
         Start time
       </label>
       <select
-        id="availability-filter-start-time"
+        id={startTimeId}
         value={filter.timeFrom ?? ""}
         onChange={(e) =>
           onChange({ ...filter, timeFrom: e.target.value || null })
@@ -62,11 +66,11 @@ export function FilterBar({ filter, onChange, availableDates }: FilterBarProps) 
       <span className="text-xs text-gray-400">–</span>
 
       {/* Time to */}
-      <label className="sr-only" htmlFor="availability-filter-end-time">
+      <label className="sr-only" htmlFor={endTimeId}>
         End time
       </label>
       <select
-        id="availability-filter-end-time"
+        id={endTimeId}
         value={filter.timeTo ?? ""}
         onChange={(e) =>
           onChange({ ...filter, timeTo: e.target.value || null })
@@ -118,9 +122,10 @@ function formatDateLabel(dateStr: string): string {
   });
   if (dateStr === today) return "Today";
 
-  const tomorrow = new Date(Date.now() + 86400000).toLocaleDateString("en-CA", {
-    timeZone: "America/Los_Angeles",
-  });
+  const [year, month, day] = today.split("-").map(Number);
+  const tomorrow = new Date(Date.UTC(year, month - 1, day + 1))
+    .toISOString()
+    .slice(0, 10);
   if (dateStr === tomorrow) return "Tomorrow";
 
   const date = new Date(dateStr + "T12:00:00-07:00");
