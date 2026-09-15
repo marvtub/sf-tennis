@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { GET, HEAD } from "./route";
+import { DISCOVERY_CACHE_CONTROL } from "@/lib/agent-readiness";
 
 describe("API catalog discovery route", () => {
   it("serves the catalog contract", async () => {
@@ -11,7 +12,7 @@ describe("API catalog discovery route", () => {
       'application/linkset+json; profile="https://www.rfc-editor.org/info/rfc9727"; charset=utf-8',
     );
     expect(response.headers.get("Cache-Control")).toBe(
-      "public, max-age=3600, s-maxage=86400",
+      DISCOVERY_CACHE_CONTROL,
     );
     expect(response.headers.get("Link")).toBe(
       '</.well-known/api-catalog>; rel="api-catalog"; type="application/linkset+json"',

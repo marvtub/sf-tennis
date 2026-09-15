@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { LAST_UPDATED, SITE_URL } from "../../lib/agent-readiness";
 import { GET } from "./route";
+import { DISCOVERY_CACHE_CONTROL } from "@/lib/agent-readiness";
 
 const expectedEntries = [
   { path: "/", priority: "1.0" },
@@ -31,7 +32,7 @@ describe("GET /sitemap.xml", () => {
       "application/xml; charset=utf-8",
     );
     expect(response.headers.get("Cache-Control")).toBe(
-      "public, max-age=3600, s-maxage=86400",
+      DISCOVERY_CACHE_CONTROL,
     );
     expect(body).toBe(`<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">

@@ -92,10 +92,21 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     // Log full error server-side; return a generic message to clients to
     // avoid leaking upstream details (URLs, headers, stack hints).
+    // Short shared cache + Retry-After dampens crawler/agent retry storms
+    // without hiding the outage for long.
     console.error("Failed to fetch courts:", error);
     return NextResponse.json(
-      { error: "Failed to fetch court availability" },
-      { status: 502 }
+      {
+        error: "Failed to fetch court availability",
+        retryAfterSeconds: 60,
+      },
+      {
+        status: 502,
+        headers: {
+          "Retry-After": "60",
+          "Cache-Control": "public, max-age=30, s-maxage=30",
+        },
+      }
     );
   }
 }

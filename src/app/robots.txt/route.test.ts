@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { GET } from "./route";
+import { DISCOVERY_CACHE_CONTROL } from "@/lib/agent-readiness";
 
 describe("GET /robots.txt", () => {
   it("publishes the crawler and sitemap contract", async () => {
@@ -10,7 +11,7 @@ describe("GET /robots.txt", () => {
     expect(response.status).toBe(200);
     expect(response.headers.get("Content-Type")).toBe("text/plain; charset=utf-8");
     expect(response.headers.get("Cache-Control")).toBe(
-      "public, max-age=3600, s-maxage=86400",
+      DISCOVERY_CACHE_CONTROL,
     );
     const groups = body.split(/\n\s*\n/);
     for (const userAgent of [

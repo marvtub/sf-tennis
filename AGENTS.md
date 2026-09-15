@@ -52,7 +52,8 @@ There is no linter config or formatter. Do not invent commands that are not in
 
 `src/middleware.ts` adds Link discovery headers on `/` and `/docs`, serves
 Markdown for those pages when `Accept: text/markdown` is requested, applies
-security headers, and rate-limits API/page requests.
+security headers, and rate-limits API, HTML, and discovery surfaces
+(`/llms.txt`, `/openapi.json`, `/.well-known/*`, `/robots.txt`, etc.).
 
 ## Availability Data Flow
 

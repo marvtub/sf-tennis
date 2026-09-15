@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { DOCS_MARKDOWN } from "../../lib/agent-readiness";
 import { GET } from "./route";
+import { DISCOVERY_CACHE_CONTROL } from "@/lib/agent-readiness";
 
 describe("GET /docs.md", () => {
   it("serves the published documentation contract", async () => {
@@ -13,7 +14,7 @@ describe("GET /docs.md", () => {
       "text/markdown; charset=utf-8",
     );
     expect(response.headers.get("Cache-Control")).toBe(
-      "public, max-age=3600, s-maxage=86400",
+      DISCOVERY_CACHE_CONTROL,
     );
     expect(response.headers.get("Link")).toBe(
       '</docs>; rel="canonical"; type="text/html"',

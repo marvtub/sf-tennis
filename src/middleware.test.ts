@@ -3,9 +3,10 @@ import { NextRequest } from "next/server";
 
 import { middleware } from "./middleware";
 
-const { apiLimit, pageLimit } = vi.hoisted(() => ({
+const { apiLimit, pageLimit, discoveryLimit } = vi.hoisted(() => ({
   apiLimit: vi.fn(),
   pageLimit: vi.fn(),
+  discoveryLimit: vi.fn(),
 }));
 
 vi.mock("@opennextjs/cloudflare", () => ({
@@ -13,6 +14,7 @@ vi.mock("@opennextjs/cloudflare", () => ({
     env: {
       API_RATE_LIMITER: { limit: apiLimit },
       PAGE_RATE_LIMITER: { limit: pageLimit },
+      DISCOVERY_RATE_LIMITER: { limit: discoveryLimit },
     },
   }),
 }));
@@ -20,6 +22,7 @@ vi.mock("@opennextjs/cloudflare", () => ({
 beforeEach(() => {
   apiLimit.mockReset().mockResolvedValue({ success: true });
   pageLimit.mockReset().mockResolvedValue({ success: true });
+  discoveryLimit.mockReset().mockResolvedValue({ success: true });
 });
 
 function requestWithAccept(accept: string): NextRequest {
@@ -63,6 +66,31 @@ describe("middleware API rate limiting", () => {
     expect(response.status).toBe(429);
     expect(response.headers.get("X-RateLimit-Limit")).toBe("60");
     expect(apiLimit).toHaveBeenCalledWith({ key: "192.0.2.3" });
+    expect(pageLimit).not.toHaveBeenCalled();
+    expect(discoveryLimit).not.toHaveBeenCalled();
+  });
+});
+
+describe.each([
+  ["/llms.txt", "192.0.2.10"],
+  ["/openapi.json", "192.0.2.11"],
+  ["/.well-known/api-catalog", "192.0.2.12"],
+  ["/robots.txt", "192.0.2.13"],
+])("middleware discovery rate limiting for %s", (pathname, ip) => {
+  it("uses the discovery limiter and rejects a denied request", async () => {
+    discoveryLimit.mockResolvedValueOnce({ success: false });
+
+    const response = await middleware(
+      new NextRequest(`https://tennis.marvinaziz.de${pathname}`, {
+        headers: { "cf-connecting-ip": ip },
+      }),
+    );
+
+    expect(response.status).toBe(429);
+    expect(response.headers.get("X-RateLimit-Limit")).toBe("40");
+    expect(response.headers.get("Cache-Control")).toBe("private, no-store");
+    expect(discoveryLimit).toHaveBeenCalledWith({ key: ip });
+    expect(apiLimit).not.toHaveBeenCalled();
     expect(pageLimit).not.toHaveBeenCalled();
   });
 });

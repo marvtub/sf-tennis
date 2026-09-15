@@ -24,6 +24,14 @@
         "limit": 100,
         "period": 60
       }
+    },
+    {
+      "name": "DISCOVERY_RATE_LIMITER",
+      "namespace_id": "391847562",
+      "simple": {
+        "limit": 40,
+        "period": 60
+      }
     }
   ],
   "routes": [

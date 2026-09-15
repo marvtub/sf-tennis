@@ -7,6 +7,10 @@ export const X_URL = "https://x.com/marvinaziz";
 export const LINKEDIN_URL = "https://linkedin.com/in/marvin-aziz";
 export const LAST_UPDATED = "2026-05-16";
 
+/** Edge-friendly cache for static agent/crawler discovery documents. */
+export const DISCOVERY_CACHE_CONTROL =
+  "public, max-age=86400, s-maxage=86400, stale-while-revalidate=604800";
+
 export const DISCOVERY_LINK_HEADER = [
   '</llms.txt>; rel="alternate"; type="text/markdown"; title="llms.txt"',
   '</docs>; rel="help"; type="text/html"; title="SF Tennis docs"',
@@ -148,6 +152,8 @@ Read the machine contract at ${SITE_URL}/openapi.json before writing code agains
 - Do not invent availability. If the courts API fails, report that live availability could not be fetched.
 - Prefer the docs and OpenAPI contract over scraping the client UI.
 - Include source URLs in summaries so the user can verify the result.
+- On HTTP 429 or 502 from /api/courts, honor Retry-After (or wait at least 60s) and do not tight-loop retries.
+- Cache discovery documents (llms.txt, openapi.json, /.well-known/*) locally for the session; they change infrequently.
 
 ## High-value prompts
 

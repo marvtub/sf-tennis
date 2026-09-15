@@ -1,6 +1,7 @@
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { NextRequest, NextResponse } from "next/server";
 import {
+  DISCOVERY_CACHE_CONTROL,
   DISCOVERY_LINK_HEADER,
   DOCS_MARKDOWN,
   HOME_MARKDOWN,
@@ -8,6 +9,7 @@ import {
 
 const RATE_LIMIT_MAX_REQUESTS = 60; // 60 req/min for API routes
 const MAP_LOAD_LIMIT = 100; // 100 page loads per minute (very generous)
+const DISCOVERY_LIMIT = 40; // 40 discovery docs/min — full agent walk + retries
 
 interface RateLimitBinding {
   limit(options: { key: string }): Promise<{ success: boolean }>;
@@ -16,6 +18,7 @@ interface RateLimitBinding {
 interface RateLimitEnv extends CloudflareEnv {
   API_RATE_LIMITER: RateLimitBinding;
   PAGE_RATE_LIMITER: RateLimitBinding;
+  DISCOVERY_RATE_LIMITER: RateLimitBinding;
 }
 
 // ── Security headers ──
@@ -115,25 +118,47 @@ function markdownResponse(markdown: string): NextResponse {
       new NextResponse(markdown, {
         headers: {
           "Content-Type": "text/markdown; charset=utf-8",
-          "Cache-Control": "public, max-age=300, s-maxage=3600",
+          "Cache-Control": DISCOVERY_CACHE_CONTROL,
         },
       })
     )
   );
 }
 
+function isDiscoveryPath(pathname: string): boolean {
+  return (
+    pathname === "/docs.md" ||
+    pathname === "/llms.txt" ||
+    pathname === "/llm.txt" ||
+    pathname === "/openapi.json" ||
+    pathname === "/robots.txt" ||
+    pathname === "/sitemap.xml" ||
+    pathname.startsWith("/.well-known/")
+  );
+}
+
 export async function middleware(request: NextRequest) {
   const ip =
     request.headers.get("cf-connecting-ip") ??
-    request.headers.get("x-forwarded-for")?.split(",")[0] ??
+    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
     "unknown";
 
-  const isApi = request.nextUrl.pathname.startsWith("/api/");
-  const isPage = request.nextUrl.pathname === "/";
-  const isDocs = request.nextUrl.pathname === "/docs";
-  const limit = isApi ? RATE_LIMIT_MAX_REQUESTS : MAP_LOAD_LIMIT;
+  const pathname = request.nextUrl.pathname;
+  const isApi = pathname.startsWith("/api/");
+  const isPage = pathname === "/";
+  const isDocs = pathname === "/docs";
+  const isDiscovery = isDiscoveryPath(pathname);
+  const limit = isApi
+    ? RATE_LIMIT_MAX_REQUESTS
+    : isDiscovery
+      ? DISCOVERY_LIMIT
+      : MAP_LOAD_LIMIT;
   const env = getCloudflareContext().env as RateLimitEnv;
-  const rateLimiter = isApi ? env.API_RATE_LIMITER : env.PAGE_RATE_LIMITER;
+  const rateLimiter = isApi
+    ? env.API_RATE_LIMITER
+    : isDiscovery
+      ? env.DISCOVERY_RATE_LIMITER
+      : env.PAGE_RATE_LIMITER;
   const { success } = await rateLimiter.limit({ key: ip });
 
   if (!success) {
@@ -145,6 +170,7 @@ export async function middleware(request: NextRequest) {
           headers: {
             "Retry-After": "60",
             "X-RateLimit-Limit": String(limit),
+            "Cache-Control": "private, no-store",
           },
         }
       )
@@ -161,5 +187,16 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/", "/docs", "/api/:path*"],
+  matcher: [
+    "/",
+    "/docs",
+    "/docs.md",
+    "/llms.txt",
+    "/llm.txt",
+    "/openapi.json",
+    "/robots.txt",
+    "/sitemap.xml",
+    "/.well-known/:path*",
+    "/api/:path*",
+  ],
 };

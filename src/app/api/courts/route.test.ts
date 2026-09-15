@@ -184,7 +184,12 @@ describe("GET /api/courts", () => {
     expect(response.status).toBe(502);
     expect(JSON.parse(responseText)).toEqual({
       error: "Failed to fetch court availability",
+      retryAfterSeconds: 60,
     });
+    expect(response.headers.get("Retry-After")).toBe("60");
+    expect(response.headers.get("Cache-Control")).toBe(
+      "public, max-age=30, s-maxage=30",
+    );
     expect(responseText).not.toContain("secret upstream URL and credentials");
     expect(enrichCourtsWithWeather).not.toHaveBeenCalled();
     expect(consoleError).toHaveBeenCalledWith(

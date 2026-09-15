@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { GET } from "./route";
 import { LLMS_TXT } from "../../lib/agent-readiness";
+import { DISCOVERY_CACHE_CONTROL } from "@/lib/agent-readiness";
 
 describe("GET /llm.txt", () => {
   it("serves the agent guide as an alias of the canonical route", async () => {
@@ -13,7 +14,7 @@ describe("GET /llm.txt", () => {
       "text/markdown; charset=utf-8",
     );
     expect(response.headers.get("Cache-Control")).toBe(
-      "public, max-age=3600, s-maxage=86400",
+      DISCOVERY_CACHE_CONTROL,
     );
     expect(response.headers.get("Link")).toBe(
       '</llms.txt>; rel="canonical"; type="text/markdown"',
