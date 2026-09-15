@@ -1,6 +1,12 @@
 "use client";
 
-import { useId, useRef, useState, type KeyboardEvent } from "react";
+import {
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type KeyboardEvent,
+} from "react";
 import { TimeSince } from "./TimeSince";
 import type { Sport, CityId } from "@/lib/constants";
 import { CITIES } from "@/lib/constants";
@@ -37,6 +43,7 @@ export function TopBar({
 }: TopBarProps) {
   const [showMenu, setShowMenu] = useState(false);
   const menuId = useId();
+  const menuRef = useRef<HTMLDivElement>(null);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
   const cityConfig = CITIES[city];
   const sportEmoji = sport === "tennis" ? "🎾" : "🏓";
@@ -51,6 +58,19 @@ export function TopBar({
       : userLocationStatus === "unsupported"
       ? "Location unavailable"
       : "Use my location";
+
+  useEffect(() => {
+    if (!showMenu) return;
+
+    function handleOutsidePointer(event: PointerEvent) {
+      if (menuRef.current?.contains(event.target as Node)) return;
+      setShowMenu(false);
+    }
+
+    document.addEventListener("pointerdown", handleOutsidePointer, true);
+    return () =>
+      document.removeEventListener("pointerdown", handleOutsidePointer, true);
+  }, [showMenu]);
 
   const handleMenuKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     if (event.key !== "Escape" || !showMenu) return;
@@ -146,7 +166,11 @@ export function TopBar({
           </button>
 
           {/* Menu button */}
-          <div className="relative" onKeyDown={handleMenuKeyDown}>
+          <div
+            ref={menuRef}
+            className="relative"
+            onKeyDown={handleMenuKeyDown}
+          >
             <button
               ref={menuButtonRef}
               onClick={() => setShowMenu(!showMenu)}
@@ -159,18 +183,12 @@ export function TopBar({
             </button>
 
             {showMenu && (
-              <>
-                <div
-                  className="fixed inset-0 z-[55]"
-                  onClick={() => setShowMenu(false)}
-                />
-                <div
-                  id={menuId}
-                  className="absolute right-0 top-8 z-[60] bg-white rounded-lg shadow-xl border py-1 w-48"
-                >
-                  <MenuLink href="/docs">Docs</MenuLink>
-                </div>
-              </>
+              <div
+                id={menuId}
+                className="absolute right-0 top-8 z-[60] bg-white rounded-lg shadow-xl border py-1 w-48"
+              >
+                <MenuLink href="/docs">Docs</MenuLink>
+              </div>
             )}
           </div>
         </div>
