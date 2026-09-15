@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { GET } from "./route";
 import { LLMS_TXT } from "../../lib/agent-readiness";
+import { DISCOVERY_CACHE_CONTROL } from "@/lib/agent-readiness";
 
 describe("GET /llms.txt", () => {
   it("serves the published agent guide with its cache policy", async () => {
@@ -13,7 +14,7 @@ describe("GET /llms.txt", () => {
       "text/markdown; charset=utf-8",
     );
     expect(response.headers.get("Cache-Control")).toBe(
-      "public, max-age=3600, s-maxage=86400",
+      DISCOVERY_CACHE_CONTROL,
     );
   });
 });

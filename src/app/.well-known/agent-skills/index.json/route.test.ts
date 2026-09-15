@@ -2,8 +2,9 @@ import { describe, expect, it } from "vitest";
 
 import { GET as getSkillMarkdown } from "../sf-tennis/SKILL.md/route";
 import { GET as getSkillIndex } from "./route";
+import { DISCOVERY_CACHE_CONTROL } from "@/lib/agent-readiness";
 
-const CACHE_POLICY = "public, max-age=3600, s-maxage=86400";
+const CACHE_POLICY = DISCOVERY_CACHE_CONTROL;
 
 async function sha256Digest(content: string) {
   const bytes = new TextEncoder().encode(content);

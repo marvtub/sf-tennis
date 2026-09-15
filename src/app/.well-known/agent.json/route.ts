@@ -1,4 +1,4 @@
-import { SITE_URL } from "@/lib/agent-readiness";
+import { DISCOVERY_CACHE_CONTROL, SITE_URL } from "@/lib/agent-readiness";
 
 export const dynamic = "force-static";
 
@@ -19,7 +19,7 @@ export function GET() {
       status: 410,
       headers: {
         "Content-Type": "application/json; charset=utf-8",
-        "Cache-Control": "public, max-age=3600, s-maxage=86400",
+        "Cache-Control": DISCOVERY_CACHE_CONTROL,
         Link: [
           '</openapi.json>; rel="service-desc"; type="application/vnd.oai.openapi+json"',
           '</.well-known/api-catalog>; rel="api-catalog"; type="application/linkset+json"',

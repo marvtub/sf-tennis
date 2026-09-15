@@ -2,6 +2,7 @@ import { compileErrors, validate } from "@readme/openapi-parser";
 import { describe, expect, it } from "vitest";
 
 import { GET } from "./route";
+import { DISCOVERY_CACHE_CONTROL } from "@/lib/agent-readiness";
 
 function collectLocalReferences(value: unknown): string[] {
   if (Array.isArray(value)) {
@@ -51,7 +52,7 @@ describe("GET /openapi.json", () => {
       "application/vnd.oai.openapi+json; charset=utf-8",
     );
     expect(response.headers.get("Cache-Control")).toBe(
-      "public, max-age=3600, s-maxage=86400",
+      DISCOVERY_CACHE_CONTROL,
     );
     expect(document.openapi).toBe("3.1.0");
     expect(document.info).toMatchObject({

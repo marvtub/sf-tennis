@@ -1,4 +1,4 @@
-import { SITE_URL } from "@/lib/agent-readiness";
+import { DISCOVERY_CACHE_CONTROL, SITE_URL } from "@/lib/agent-readiness";
 
 export const dynamic = "force-static";
 
@@ -87,7 +87,25 @@ const openapi = {
           },
           "502": {
             description:
-              "An upstream availability request failed; no partial availability is returned.",
+              "An upstream availability request failed; no partial availability is returned. Clients and agents should honor Retry-After (typically 60s) and avoid tight retry loops. Error responses may be briefly cached at the edge to absorb retry storms.",
+            headers: {
+              "Retry-After": {
+                schema: { type: "integer" },
+                description: "Seconds to wait before retrying.",
+              },
+            },
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  required: ["error"],
+                  properties: {
+                    error: { type: "string" },
+                    retryAfterSeconds: { type: "integer", example: 60 },
+                  },
+                },
+              },
+            },
           },
         },
       },
@@ -247,7 +265,7 @@ export function GET() {
   return Response.json(openapi, {
     headers: {
       "Content-Type": "application/vnd.oai.openapi+json; charset=utf-8",
-      "Cache-Control": "public, max-age=3600, s-maxage=86400",
+      "Cache-Control": DISCOVERY_CACHE_CONTROL,
     },
   });
 }

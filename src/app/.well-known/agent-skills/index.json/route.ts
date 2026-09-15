@@ -1,4 +1,4 @@
-import { sha256Digest, SITE_URL, SKILL_MD } from "@/lib/agent-readiness";
+import { DISCOVERY_CACHE_CONTROL, sha256Digest, SITE_URL, SKILL_MD } from "@/lib/agent-readiness";
 
 export const dynamic = "force-static";
 
@@ -20,7 +20,7 @@ export async function GET() {
   return Response.json(index, {
     headers: {
       "Content-Type": "application/json; charset=utf-8",
-      "Cache-Control": "public, max-age=3600, s-maxage=86400",
+      "Cache-Control": DISCOVERY_CACHE_CONTROL,
       Link: `<${SITE_URL}/.well-known/agent-skills/sf-tennis/SKILL.md>; rel="item"; type="text/markdown"`,
     },
   });

@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { GET as getLegacyAgentCard } from "./route";
 import { GET as getLegacyAgentCardAlias } from "../agent-card.json/route";
 import { DISCOVERY_LINK_HEADER, LLMS_TXT } from "../../../lib/agent-readiness";
+import { DISCOVERY_CACHE_CONTROL } from "@/lib/agent-readiness";
 
 describe("legacy agent-card routes", () => {
   it.each([
@@ -19,7 +20,7 @@ describe("legacy agent-card routes", () => {
         "application/json; charset=utf-8",
       );
       expect(response.headers.get("Cache-Control")).toBe(
-        "public, max-age=3600, s-maxage=86400",
+        DISCOVERY_CACHE_CONTROL,
       );
       expect(response.headers.get("Link")).toBe(
         [
