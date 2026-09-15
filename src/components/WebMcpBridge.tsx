@@ -51,6 +51,79 @@ function runRegistrationCleanup(handle: unknown): boolean {
   return false;
 }
 
+function isPromiseLike(value: unknown): value is PromiseLike<unknown> {
+  return (
+    value !== null &&
+    (typeof value === "object" || typeof value === "function") &&
+    typeof (value as { then?: unknown }).then === "function"
+  );
+}
+
+function createRegistrationCleanup(
+  handle: unknown,
+  fallback: () => unknown,
+  label: string,
+  onRegistrationFailure?: () => void,
+): () => void {
+  let cleanupRequested = false;
+  let fallbackRan = false;
+  let pending = isPromiseLike(handle);
+  let settledHandle = pending ? undefined : handle;
+
+  const warn = (action: string, error: unknown) => {
+    console.warn(`Unable to ${action} WebMCP ${label}`, error);
+  };
+  const runFallback = () => {
+    if (fallbackRan) return;
+    fallbackRan = true;
+    try {
+      const result = fallback();
+      if (isPromiseLike(result)) {
+        void Promise.resolve(result).catch((error: unknown) =>
+          warn("clean up", error),
+        );
+      }
+    } catch (error) {
+      warn("clean up", error);
+    }
+  };
+  const runSettledCleanup = () => {
+    try {
+      return runRegistrationCleanup(settledHandle);
+    } catch (error) {
+      warn("clean up", error);
+      return false;
+    }
+  };
+
+  if (pending) {
+    void Promise.resolve(handle).then(
+      (resolvedHandle) => {
+        pending = false;
+        settledHandle = resolvedHandle;
+        if (cleanupRequested && !runSettledCleanup() && !fallbackRan) {
+          runFallback();
+        }
+      },
+      (error: unknown) => {
+        pending = false;
+        settledHandle = undefined;
+        if (!cleanupRequested) {
+          warn("register", error);
+          onRegistrationFailure?.();
+        }
+      },
+    );
+  }
+
+  return () => {
+    if (cleanupRequested) return;
+    cleanupRequested = true;
+    if (!pending && runSettledCleanup()) return;
+    runFallback();
+  };
+}
+
 function asChoice(value: unknown, fallback: string, allowed: string[]): string {
   return typeof value === "string" && allowed.includes(value) ? value : fallback;
 }
@@ -98,14 +171,16 @@ export function WebMcpBridge() {
 
     if (typeof modelContext.provideTools === "function") {
       const registration = modelContext.provideTools(tools);
-      return () => {
-        if (runRegistrationCleanup(registration)) return;
-        if (typeof modelContext.clearTools === "function") {
-          modelContext.clearTools();
-          return;
-        }
-        modelContext.provideTools?.([]);
-      };
+      return createRegistrationCleanup(
+        registration,
+        () => {
+          if (typeof modelContext.clearTools === "function") {
+            return modelContext.clearTools();
+          }
+          return modelContext.provideTools?.([]);
+        },
+        "tools",
+      );
     }
 
     if (typeof modelContext.provideContext === "function") {
@@ -116,45 +191,54 @@ export function WebMcpBridge() {
         tools,
       };
       const registration = modelContext.provideContext(context);
-      return () => {
-        if (runRegistrationCleanup(registration)) return;
-        if (typeof modelContext.clearContext === "function") {
-          modelContext.clearContext();
-          return;
-        }
-        modelContext.provideContext?.({ ...context, tools: [] });
-      };
+      return createRegistrationCleanup(
+        registration,
+        () => {
+          if (typeof modelContext.clearContext === "function") {
+            return modelContext.clearContext();
+          }
+          return modelContext.provideContext?.({ ...context, tools: [] });
+        },
+        "context",
+      );
     }
 
     if (typeof modelContext.registerTool === "function") {
-      const registrations = tools.map((tool) => {
-        const controller = new AbortController();
-        const handle = modelContext.registerTool?.(tool, {
-          signal: controller.signal,
-        });
-        void Promise.resolve(handle).catch((error: unknown) => {
-          if (!controller.signal.aborted) {
-            console.warn(`Unable to register WebMCP tool "${tool.name}"`, error);
-          }
-        });
-
-        return {
-          controller,
-          handle,
-          tool,
-        };
-      });
-
-      return () => {
-        registrations.forEach(({ controller, handle, tool }) => {
-          if (runRegistrationCleanup(handle)) return;
-          if (typeof modelContext.unregisterTool === "function") {
-            modelContext.unregisterTool(tool.name);
-            return;
-          }
-          controller.abort();
-        });
+      const cleanups: Array<() => void> = [];
+      let cleanupRequested = false;
+      const cleanupRegistrations = () => {
+        if (cleanupRequested) return;
+        cleanupRequested = true;
+        [...cleanups].reverse().forEach((cleanup) => cleanup());
       };
+
+      try {
+        for (const tool of tools) {
+          const controller = new AbortController();
+          const handle = modelContext.registerTool(tool, {
+            signal: controller.signal,
+          });
+          cleanups.push(
+            createRegistrationCleanup(
+              handle,
+              () => {
+                if (typeof modelContext.unregisterTool === "function") {
+                  return modelContext.unregisterTool(tool.name);
+                }
+                controller.abort();
+              },
+              `tool "${tool.name}"`,
+              cleanupRegistrations,
+            ),
+          );
+        }
+      } catch (error) {
+        console.warn("Unable to register WebMCP tools", error);
+        cleanupRegistrations();
+        return;
+      }
+
+      return cleanupRegistrations;
     }
   }, []);
 

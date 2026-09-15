@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { cleanup, render } from "@testing-library/react";
+import { act, cleanup, render } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { WebMcpBridge } from "./WebMcpBridge";
@@ -65,15 +65,15 @@ describe("WebMcpBridge", () => {
     expect(activeTools.size).toBe(0);
   });
 
-  it("observes registration promises before aborting them", () => {
-    const registrations = [Promise.resolve(), Promise.resolve()];
-    const catchSpies = registrations.map((registration) =>
-      vi.spyOn(registration, "catch"),
-    );
-    const registerTool = vi
-      .fn()
-      .mockReturnValueOnce(registrations[0])
-      .mockReturnValueOnce(registrations[1]);
+  it("invokes promise-resolved cleanup handles after unmount", async () => {
+    const activeTools = new Set<string>();
+    const resolveHandles: Array<() => void> = [];
+    const registerTool = vi.fn((tool: { name: string }) => {
+      activeTools.add(tool.name);
+      return new Promise<() => void>((resolve) => {
+        resolveHandles.push(() => resolve(() => activeTools.delete(tool.name)));
+      });
+    });
 
     Object.defineProperty(navigator, "modelContext", {
       configurable: true,
@@ -82,10 +82,64 @@ describe("WebMcpBridge", () => {
 
     const mounted = render(<WebMcpBridge />);
     mounted.unmount();
+    expect(activeTools.size).toBe(2);
 
-    for (const catchSpy of catchSpies) {
-      expect(catchSpy).toHaveBeenCalledTimes(1);
-    }
+    await act(async () => {
+      resolveHandles.forEach((resolve) => resolve());
+    });
+
+    expect(activeTools.size).toBe(0);
+  });
+
+  it("rolls back earlier tools when a later registration throws", () => {
+    const activeTools = new Set<string>();
+    const registerTool = vi.fn((tool: { name: string }) => {
+      if (tool.name === "sf_tennis_get_docs") {
+        throw new Error("registration failed");
+      }
+      activeTools.add(tool.name);
+    });
+    const unregisterTool = vi.fn((name: string) => activeTools.delete(name));
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    Object.defineProperty(navigator, "modelContext", {
+      configurable: true,
+      value: { registerTool, unregisterTool },
+    });
+
+    render(<WebMcpBridge />);
+
+    expect(registerTool).toHaveBeenCalledTimes(2);
+    expect(unregisterTool).toHaveBeenCalledWith("sf_tennis_get_courts");
+    expect(activeTools.size).toBe(0);
+  });
+
+  it("rolls back all tools when an asynchronous registration fails", async () => {
+    const activeTools = new Set<string>();
+    let rejectRegistration!: (error: Error) => void;
+    const registerTool = vi.fn((tool: { name: string }) => {
+      activeTools.add(tool.name);
+      if (tool.name === "sf_tennis_get_docs") {
+        return new Promise<void>((_resolve, reject) => {
+          rejectRegistration = reject;
+        });
+      }
+    });
+    const unregisterTool = vi.fn((name: string) => activeTools.delete(name));
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    Object.defineProperty(navigator, "modelContext", {
+      configurable: true,
+      value: { registerTool, unregisterTool },
+    });
+
+    render(<WebMcpBridge />);
+    await act(async () => {
+      rejectRegistration(new Error("registration failed"));
+    });
+
+    expect(unregisterTool).toHaveBeenCalledTimes(2);
+    expect(activeTools.size).toBe(0);
   });
 
   it("invokes the cleanup returned by bulk tool registration", () => {
