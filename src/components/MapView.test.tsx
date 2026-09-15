@@ -100,11 +100,11 @@ describe("MapView location behavior", () => {
     expect(container.querySelector('[aria-label="Home"]')).toBeNull();
   });
 
-  it("updates a court marker label when the court name changes", async () => {
+  it("renames the right keyed marker without leaving a stale accessible name", async () => {
     const onSelectCourt = vi.fn();
     const travelTimes = new Map();
     const court: CourtLocation = {
-      id: "1",
+      id: "court-1",
       name: "Old name",
       lat: 37.77,
       lng: -122.42,
@@ -117,6 +117,12 @@ describe("MapView location behavior", () => {
       availabilityStatus: "available",
       totalSlotsToday: 1,
       totalSlotsWeek: 1,
+    };
+    const neighbor: CourtLocation = {
+      ...court,
+      id: "court-2",
+      name: "Neighbor",
+      lat: 37.78,
     };
     const userLocation: UserLocation = {
       lat: CITIES.sf.lat,
@@ -140,14 +146,31 @@ describe("MapView location behavior", () => {
       });
     }
 
-    await renderWithCourts([court]);
-    expect(container.querySelector("button")?.getAttribute("aria-label")).toBe(
-      "Old name: Available today",
-    );
+    function getMarkerButton(accessibleName: string) {
+      const button = Array.from(
+        container.querySelectorAll<HTMLButtonElement>("button"),
+      ).find((candidate) => candidate.getAttribute("aria-label") === accessibleName);
+      if (!button) throw new Error(`Missing marker: ${accessibleName}`);
+      return button;
+    }
 
-    await renderWithCourts([{ ...court, name: "New name" }]);
-    expect(container.querySelector("button")?.getAttribute("aria-label")).toBe(
-      "New name: Available today",
-    );
+    await renderWithCourts([court, neighbor]);
+    const originalButton = getMarkerButton("Old name: Available today");
+    const neighborButton = getMarkerButton("Neighbor: Available today");
+
+    // Reorder the array while changing only court-1's name. Stable callbacks,
+    // status, coordinates, and ids force the CourtMarker and CourtPin name
+    // comparator paths; keyed identity must not cross the two markers.
+    await renderWithCourts([neighbor, { ...court, name: "New name" }]);
+
+    const renamedButton = getMarkerButton("New name: Available today");
+    expect(renamedButton).toBe(originalButton);
+    expect(getMarkerButton("Neighbor: Available today")).toBe(neighborButton);
+    expect(
+      container.querySelector('[aria-label="Old name: Available today"]'),
+    ).toBeNull();
+
+    renamedButton.click();
+    expect(onSelectCourt).toHaveBeenLastCalledWith("court-1");
   });
 });
