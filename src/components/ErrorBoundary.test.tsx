@@ -34,12 +34,18 @@ describe("ErrorBoundary", () => {
   });
 
   it("renders the default fallback when none is supplied", () => {
-    render(
+    const { container } = render(
       <ErrorBoundary>
         <ThrowingChild />
       </ErrorBoundary>,
     );
 
-    expect(screen.getByText("Something went wrong")).toBeTruthy();
+    const alert = screen.getByRole("alert");
+    expect(alert.textContent).toContain("Something went wrong");
+    expect(alert.textContent).toContain("render failed");
+    expect(screen.getByRole("button", { name: "Try again" })).toBeTruthy();
+    expect(container.querySelector('[aria-hidden="true"]')?.textContent).toBe(
+      "😵",
+    );
   });
 });
