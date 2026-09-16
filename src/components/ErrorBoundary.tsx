@@ -28,8 +28,10 @@ export class ErrorBoundary extends React.Component<Props, State> {
 
       return (
         <div className="flex items-center justify-center h-full p-8">
-          <div className="text-center space-y-3">
-            <div className="text-3xl">😵</div>
+          <div role="alert" className="text-center space-y-3">
+            <div aria-hidden="true" className="text-3xl">
+              😵
+            </div>
             <h2 className="text-lg font-semibold text-gray-800">
               Something went wrong
             </h2>
