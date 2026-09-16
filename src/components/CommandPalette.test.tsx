@@ -4,6 +4,7 @@ import { cleanup, render, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import type { UserLocationStatus } from "@/hooks/useUserLocation";
 import type { CourtLocation } from "@/types";
 import { CommandPalette, getCommandKeyboardAction } from "./CommandPalette";
 
@@ -53,7 +54,7 @@ function setDesktop(matches: boolean) {
   }));
 }
 
-function renderPalette() {
+function renderPalette(userLocationStatus: UserLocationStatus = "idle") {
   const callbacks = {
     onSelectCourt: vi.fn(),
     onSportChange: vi.fn(),
@@ -75,7 +76,7 @@ function renderPalette() {
         timeTo: null,
       }}
       availableDates={[]}
-      userLocationStatus="idle"
+      userLocationStatus={userLocationStatus}
       {...callbacks}
     />,
   );
@@ -283,5 +284,22 @@ describe("CommandPalette keyboard handling", () => {
       timeFrom: "12:00",
       timeTo: "17:00",
     });
+  });
+});
+
+describe("CommandPalette location control", () => {
+  it("disables location requests while a request is already pending", async () => {
+    setDesktop(false);
+    const user = userEvent.setup();
+    const { container, callbacks } = renderPalette("requesting");
+
+    await user.click(within(container).getByRole("button", { name: /SF/ }));
+    const locationButton = within(container).getByRole("button", {
+      name: "Finding my location…",
+    });
+
+    expect(locationButton.hasAttribute("disabled")).toBe(true);
+    await user.click(locationButton);
+    expect(callbacks.onRequestLocation).not.toHaveBeenCalled();
   });
 });
