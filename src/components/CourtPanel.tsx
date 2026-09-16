@@ -71,10 +71,12 @@ export function CourtPanel({
 
       {/* Info */}
       <div className="px-4 py-3 border-b space-y-1.5 text-sm">
-        <p>
-          <span className="text-gray-500">Hours:</span>{" "}
-          {location.hoursOfOperation}
-        </p>
+        {location.hoursOfOperation && (
+          <p>
+            <span className="text-gray-500">Hours:</span>{" "}
+            {location.hoursOfOperation}
+          </p>
+        )}
         {location.gettingThereInfo && (
           <p>
             <span className="text-gray-500">Getting there:</span>{" "}
