@@ -555,7 +555,10 @@ function MobileContent({
               : "Use my location"
           }
           active={userLocationStatus === "resolved"}
-          disabled={userLocationStatus === "unsupported"}
+          disabled={
+            userLocationStatus === "requesting" ||
+            userLocationStatus === "unsupported"
+          }
           helper={
             userLocationStatus === "unsupported"
               ? "Location isn’t available on this device/browser"
