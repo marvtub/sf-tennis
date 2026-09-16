@@ -1,5 +1,8 @@
+// @vitest-environment jsdom
+
+import { cleanup, render, screen } from "@testing-library/react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { CourtLocation } from "@/types";
 import { CourtPanel } from "./CourtPanel";
@@ -19,6 +22,10 @@ const location: CourtLocation = {
   totalSlotsToday: 2,
   totalSlotsWeek: 4,
 };
+
+afterEach(() => {
+  cleanup();
+});
 
 function renderPanel(hoursOfOperation: string) {
   return renderToStaticMarkup(
@@ -46,5 +53,22 @@ describe("CourtPanel", () => {
 
     expect(markup).toContain("Hours:");
     expect(markup).toContain("8am–8pm");
+  });
+
+  it("exposes court details as a region named by the court heading", () => {
+    render(
+      <CourtPanel
+        location={location}
+        travelTime={null}
+        onClose={vi.fn()}
+        originLat={37.77}
+        originLng={-122.42}
+      />,
+    );
+
+    const panel = screen.getByRole("region", { name: "Alice Marble" });
+    const heading = screen.getByRole("heading", { name: "Alice Marble" });
+
+    expect(panel.getAttribute("aria-labelledby")).toBe(heading.id);
   });
 });
