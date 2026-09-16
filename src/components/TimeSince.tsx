@@ -13,14 +13,17 @@ export function formatTimeSince(isoString: string, now = Date.now()) {
 }
 
 export function TimeSince({ isoString }: { isoString: string }) {
-  const [, setTick] = useState(0);
+  const [now, setNow] = useState<number | null>(null);
 
   useEffect(() => {
-    const interval = setInterval(() => setTick((t) => t + 1), 10000);
+    const updateNow = () => setNow(Date.now());
+    updateNow();
+
+    const interval = setInterval(updateNow, 10000);
     return () => clearInterval(interval);
   }, []);
 
-  const label = formatTimeSince(isoString);
+  const label = now === null ? "recently" : formatTimeSince(isoString, now);
 
   return <span className="text-gray-500">Updated {label}</span>;
 }
