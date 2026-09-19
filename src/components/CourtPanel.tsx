@@ -1,5 +1,6 @@
 "use client";
 
+import { useId } from "react";
 import type { CourtLocation, TravelTime } from "@/types";
 import { SlotGrid } from "./SlotGrid";
 import { TravelBadge } from "./TravelBadge";
@@ -19,13 +20,21 @@ export function CourtPanel({
   originLat,
   originLng,
 }: CourtPanelProps) {
+  const titleId = useId();
+
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-20 max-h-[70vh] overflow-y-auto bg-white rounded-t-2xl shadow-2xl border-t sm:fixed sm:left-auto sm:top-[88px] sm:bottom-0 sm:right-0 sm:w-[420px] sm:max-h-none sm:rounded-none sm:rounded-l-2xl sm:border-l sm:border-t-0">
+    <div
+      role="region"
+      aria-labelledby={titleId}
+      className="fixed bottom-0 left-0 right-0 z-20 max-h-[70vh] overflow-y-auto bg-white rounded-t-2xl shadow-2xl border-t sm:fixed sm:left-auto sm:top-[88px] sm:bottom-0 sm:right-0 sm:w-[420px] sm:max-h-none sm:rounded-none sm:rounded-l-2xl sm:border-l sm:border-t-0"
+    >
       {/* Header */}
       <div className="sticky top-0 bg-white border-b px-4 py-3 flex items-start justify-between z-10">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
-            <h2 className="text-lg font-bold truncate">{location.name}</h2>
+            <h2 id={titleId} className="text-lg font-bold truncate">
+              {location.name}
+            </h2>
           </div>
           <p className="text-sm text-gray-500 truncate">{location.address}</p>
         </div>
