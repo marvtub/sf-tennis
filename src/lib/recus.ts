@@ -1,170 +1,109 @@
 import {
   RECUS_API_BASE,
   RECUS_HEADERS,
+  CITIES,
+  DEFAULT_CITY,
 } from "./constants";
 import type {
-  RecUsLocationResponse,
+  RecUsLocationDetailResponse,
   CourtLocation,
   Court,
-  TimeSlot,
 } from "@/types";
 
 /**
- * Fetch all SF tennis court locations with ACCURATE availability.
+ * Fetch court LOCATION METADATA for a city (no live availability).
  *
- * Strategy:
- *  1. Bulk endpoint → location metadata (name, coords, courts, pricing)
- *  2. Per-site endpoint → actual availability (accounts for real bookings)
+ * rec.us edge-filtering 403s every availability endpoint
+ * (`/v1/locations/availability`, `/v1/sites/{id}/availability`,
+ * `/v1/locations/{id}/schedule`) for server runtimes such as Cloudflare
+ * Workers, while the metadata endpoints keep working. So the server provides
+ * metadata (locations, courts, pricing, booking links) and browsers fetch
+ * per-court availability directly (see `@/lib/availability-client`), which
+ * rec.us serves to real browsers (CORS `*`; same calls as rec.us's own
+ * frontend).
  *
- * The bulk endpoint's `availableSlots` field is INACCURATE — it returns
- * theoretical schedule slots, not actual availability. We must use the
- * per-site endpoint for each court to get real data.
+ * Strategy: per-location `/v1/locations/{id}?publishedSites=true` for the
+ * city's configured location IDs, transformed to CourtLocation with EMPTY
+ * `availableSlots`. The client fills slots in and recomputes the totals and
+ * `availabilityStatus`.
  */
 export async function fetchAllCourts(orgSlug?: string): Promise<CourtLocation[]> {
-  // Step 1: Get all locations + court metadata from bulk endpoint
-  const slug = orgSlug || "san-francisco-rec-park";
-  const bulkUrl = `${RECUS_API_BASE}/v1/locations/availability?organizationSlug=${slug}&publishedSites=true`;
-  const bulkRes = await fetch(bulkUrl, { headers: RECUS_HEADERS });
+  const city =
+    Object.values(CITIES).find((c) => c.slug === (orgSlug || CITIES[DEFAULT_CITY].slug)) ??
+    CITIES[DEFAULT_CITY];
 
-  if (!bulkRes.ok) {
-    throw new Error(`rec.us API error: ${bulkRes.status} ${bulkRes.statusText}`);
-  }
+  // Fetch location details in parallel (batched to avoid hammering).
+  // A single failing location must not take down the whole city: skip it.
+  const BATCH_SIZE = 10;
+  const details: RecUsLocationDetailResponse[] = [];
 
-  const rawLocations: RecUsLocationResponse[] = await bulkRes.json();
-
-  // Step 2: Fetch per-site availability for ALL courts in parallel
-  const now = new Date();
-  const startDate = toSFDate(now);
-  const endDate = addCalendarDays(startDate, 7);
-
-  // Collect all court IDs
-  const allCourts: { courtId: string; locationIndex: number; courtIndex: number }[] = [];
-  for (let li = 0; li < rawLocations.length; li++) {
-    const courts = rawLocations[li].location.courts;
-    for (let ci = 0; ci < courts.length; ci++) {
-      allCourts.push({ courtId: courts[ci].id, locationIndex: li, courtIndex: ci });
-    }
-  }
-
-  // Fetch all per-site availability in parallel (batched to avoid hammering)
-  const BATCH_SIZE = 15;
-  const siteAvailability = new Map<string, string[]>();
-
-  for (let i = 0; i < allCourts.length; i += BATCH_SIZE) {
-    const batch = allCourts.slice(i, i + BATCH_SIZE);
+  for (let i = 0; i < city.locationIds.length; i += BATCH_SIZE) {
+    const batch = city.locationIds.slice(i, i + BATCH_SIZE);
     const results = await Promise.all(
-      batch.map(async ({ courtId }) => {
-        const url = `${RECUS_API_BASE}/v1/sites/${courtId}/availability?startDate=${startDate}&endDate=${endDate}`;
-        const res = await fetch(url, { headers: RECUS_HEADERS });
-        if (!res.ok) {
-          throw new Error(
-            `rec.us per-site API error for court ${courtId}: ${res.status} ${res.statusText}`
-          );
-        }
-
-        const data = await res.json();
-        const slots: string[] = [];
-
-        // data.data is { "2026-03-30": { "13:30:00": { availableDurationsMinutes: [...] } } }
-        for (const [date, times] of Object.entries(data.data || {})) {
-          for (const time of Object.keys(times as Record<string, unknown>)) {
-            slots.push(`${date} ${time.slice(0, 5)}`);
+      batch.map(async (locationId) => {
+        try {
+          const url = `${RECUS_API_BASE}/v1/locations/${locationId}?publishedSites=true`;
+          const res = await fetch(url, { headers: RECUS_HEADERS });
+          if (!res.ok) {
+            console.warn(
+              `rec.us location detail failed for ${locationId}: ${res.status} ${res.statusText}`
+            );
+            return null;
           }
+          return (await res.json()) as RecUsLocationDetailResponse;
+        } catch (error) {
+          console.warn(`rec.us location detail threw for ${locationId}:`, error);
+          return null;
         }
-        return { courtId, slots: slots.sort() };
       })
     );
 
-    for (const { courtId, slots } of results) {
-      siteAvailability.set(courtId, slots);
+    for (const detail of results) {
+      if (detail) details.push(detail);
     }
   }
 
-  // Step 3: Transform with REAL availability data
-  const todayStr = toSFDate(now);
+  if (details.length === 0) {
+    throw new Error("rec.us API error: all location detail requests failed");
+  }
 
-  return rawLocations
-    .map((raw) => transformLocation(raw, siteAvailability, todayStr))
+  return details
+    .map(transformLocation)
     .filter((loc) => loc.courts.length > 0);
 }
 
-function transformLocation(
-  raw: RecUsLocationResponse,
-  siteAvailability: Map<string, string[]>,
-  todayStr: string
-): CourtLocation {
+function transformLocation(raw: RecUsLocationDetailResponse): CourtLocation {
   const loc = raw.location;
 
-  const courts: Court[] = loc.courts.map((c) => {
-    // Use per-site availability (accurate) instead of bulk availableSlots
-    const realSlots = siteAvailability.get(c.id);
-    if (!realSlots) {
-      throw new Error(`Missing per-site availability for court ${c.id}`);
-    }
-
-    const slots: TimeSlot[] = realSlots.map((s) => ({
-      datetime: s,
-      date: s.split(" ")[0],
-      time: s.split(" ")[1],
-    }));
-
-    return {
+  const courts: Court[] = (loc.courts ?? [])
+    .filter((c) => !c.archivedAt)
+    .map((c) => ({
       id: c.id,
       courtNumber: c.courtNumber,
       sportId: c.sports?.[0]?.sportId ?? "",
       priceCentsPerHour: c.config?.pricing?.default?.cents ?? 0,
       allowedDurations: c.allowedReservationDurations?.minutes ?? [90],
-      reservationWindowDays: c.defaultReservationWindowDays,
-      releaseTime: c.reservationReleaseTimeLocal,
-      availableSlots: slots,
+      reservationWindowDays: c.defaultReservationWindowDays ?? 7,
+      releaseTime: c.reservationReleaseTimeLocal ?? "",
+      // Live slots are fetched in the browser (see availability-client).
+      availableSlots: [],
       bookingUrl: `https://www.rec.us/locations/${loc.id}?courtId=${c.id}&tab=calendar`,
-    };
-  });
-
-  const totalSlotsToday = courts.reduce(
-    (sum, c) => sum + c.availableSlots.filter((s) => s.date === todayStr).length,
-    0
-  );
-
-  const totalSlotsWeek = courts.reduce(
-    (sum, c) => sum + c.availableSlots.length,
-    0
-  );
-
-  let availabilityStatus: "available" | "later" | "full";
-  if (totalSlotsToday > 0) {
-    availabilityStatus = "available";
-  } else if (totalSlotsWeek > 0) {
-    availabilityStatus = "later";
-  } else {
-    availabilityStatus = "full";
-  }
+    }));
 
   return {
     id: loc.id,
     name: loc.name,
     lat: parseFloat(loc.lat),
     lng: parseFloat(loc.lng),
-    address: raw.formattedAddress,
-    hoursOfOperation: raw.hoursOfOperation,
-    accessInfo: raw.accessInfo,
-    gettingThereInfo: raw.gettingThereInfo,
-    imageUrl: raw.images?.thumbnail ?? raw.images?.detail ?? null,
+    address: loc.formattedAddress ?? "",
+    hoursOfOperation: typeof loc.hoursOfOperation === "string" ? loc.hoursOfOperation : "",
+    accessInfo: loc.accessInfo ?? "",
+    gettingThereInfo: loc.gettingThereInfo ?? "",
+    imageUrl: loc.images?.detail?.url ?? loc.images?.thumbnail?.url ?? null,
     courts,
-    availabilityStatus,
-    totalSlotsToday,
-    totalSlotsWeek,
+    // Recomputed client-side once live slots arrive.
+    availabilityStatus: "full",
+    totalSlotsToday: 0,
+    totalSlotsWeek: 0,
   };
-}
-
-/** Get date string in SF timezone: "2026-03-30" */
-function toSFDate(date: Date): string {
-  return date.toLocaleDateString("en-CA", { timeZone: "America/Los_Angeles" });
-}
-
-function addCalendarDays(date: string, days: number): string {
-  const [year, month, day] = date.split("-").map(Number);
-  return new Date(Date.UTC(year, month - 1, day + days))
-    .toISOString()
-    .slice(0, 10);
 }

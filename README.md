@@ -18,7 +18,7 @@ slot-level openings from rec.us, adds weather and travel context, and keeps a
 small public API surface for users, agents, and scripts.
 
 - Shows live tennis and pickleball slots for San Francisco and Mountain View.
-- Fetches per-court rec.us availability instead of relying on stale bulk slots.
+- Fetches per-court rec.us availability in the browser instead of relying on stale bulk slots (rec.us blocks server runtimes; `/api/courts` returns metadata with `slotsPending: true`).
 - Adds walking and driving estimates through a server-side Mapbox proxy.
 - Publishes docs, Markdown, OpenAPI, API catalog, and agent skill discovery.
 - Runs on Next.js App Router and Cloudflare Workers via OpenNext.
