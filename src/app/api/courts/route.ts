@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { fetchAllCourts } from "@/lib/recus";
-import { enrichCourtsWithWeather } from "@/lib/weather";
 import {
-  AVAILABILITY_CACHE_SECONDS,
+  METADATA_CACHE_SECONDS,
   SPORT_ID_TENNIS,
   SPORT_ID_PICKLEBALL,
   CITIES,
@@ -17,6 +16,11 @@ const SPORT_IDS: Record<Sport, string> = {
 
 /**
  * GET /api/courts?sport=tennis|pickleball&city=sf|mountain-view
+ *
+ * Returns location/court METADATA only. rec.us edge-filtering blocks its
+ * availability endpoints for server runtimes, so live `availableSlots` are
+ * always empty here (`slotsPending: true`); browsers fetch them directly
+ * from rec.us (see `@/lib/availability-client`) and merge them client-side.
  */
 export async function GET(request: NextRequest) {
   try {
@@ -49,43 +53,26 @@ export async function GET(request: NextRequest) {
 
     const allCourts = await fetchAllCourts(city.slug);
 
-    // Filter each location's courts by sport, then drop locations with no matching courts
-    const todayStr = new Date().toLocaleDateString("en-CA", {
-      timeZone: "America/Los_Angeles",
-    });
-
+    // Filter each location's courts by sport, then drop locations with no matching courts.
+    // Slots/totals stay empty here; the browser fills them in.
     const courts = allCourts
-      .map((loc) => {
-        const filtered = loc.courts.filter((c) => c.sportId === sportId);
-        const totalSlotsToday = filtered.reduce(
-          (sum, c) =>
-            sum + c.availableSlots.filter((s) => s.date === todayStr).length,
-          0
-        );
-        const totalSlotsWeek = filtered.reduce(
-          (sum, c) => sum + c.availableSlots.length,
-          0
-        );
-        const availabilityStatus: "available" | "later" | "full" =
-          totalSlotsToday > 0 ? "available" : totalSlotsWeek > 0 ? "later" : "full";
-
-        return {
-          ...loc,
-          courts: filtered,
-          totalSlotsToday,
-          totalSlotsWeek,
-          availabilityStatus,
-        };
-      })
+      .map((loc) => ({
+        ...loc,
+        courts: loc.courts.filter((c) => c.sportId === sportId),
+      }))
       .filter((loc) => loc.courts.length > 0);
 
-    const courtsWithWeather = await enrichCourtsWithWeather(courts);
-
     return NextResponse.json(
-      { courts: courtsWithWeather, sport, city: cityId, fetchedAt: new Date().toISOString() },
+      {
+        courts,
+        sport,
+        city: cityId,
+        fetchedAt: new Date().toISOString(),
+        slotsPending: true,
+      },
       {
         headers: {
-          "Cache-Control": `s-maxage=${AVAILABILITY_CACHE_SECONDS}, stale-while-revalidate=300`,
+          "Cache-Control": `s-maxage=${METADATA_CACHE_SECONDS}, stale-while-revalidate=86400`,
         },
       }
     );

@@ -39,9 +39,10 @@ const openapi = {
     "/api/courts": {
       get: {
         tags: ["Availability"],
-        summary: "List public court availability.",
+        summary: "List public court metadata.",
         description:
-          "Returns tennis or pickleball court availability for San Francisco or Mountain View. No authentication required.",
+          "Returns tennis or pickleball court metadata for San Francisco or Mountain View. No authentication required. Live availableSlots are always empty server-side (slotsPending is true) because rec.us blocks server runtimes; browsers fetch live slots from rec.us directly.",
+
         parameters: [
           {
             name: "sport",
@@ -161,11 +162,16 @@ const openapi = {
       },
       CourtsResponse: {
         type: "object",
-        required: ["sport", "city", "fetchedAt", "courts"],
+        required: ["sport", "city", "fetchedAt", "courts", "slotsPending"],
         properties: {
           sport: { type: "string", enum: ["tennis", "pickleball"] },
           city: { type: "string", enum: ["sf", "mountain-view"] },
           fetchedAt: { type: "string", format: "date-time" },
+          slotsPending: {
+            type: "boolean",
+            description:
+              "Always true: live slots are filled in by the browser app, not the API.",
+          },
           courts: {
             type: "array",
             items: { $ref: "#/components/schemas/Location" },
@@ -212,6 +218,7 @@ const openapi = {
           sportId: { type: "string" },
           availableSlots: {
             type: "array",
+            description: "Empty in API responses; filled in by the browser app.",
             items: { $ref: "#/components/schemas/Slot" },
           },
         },

@@ -1,97 +1,123 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { fetchAllCourts } from "./recus";
 
-function jsonResponse(body: unknown): Response {
-  return new Response(JSON.stringify(body), {
-    status: 200,
-    headers: { "Content-Type": "application/json" },
-  });
-}
-
-function bulkResponse(courtIds: string[]) {
-  return [
-    {
-      location: {
-        id: "location-1",
-        name: "Test courts",
-        lat: "37.77",
-        lng: "-122.42",
-        courts: courtIds.map((id, index) => ({
-          id,
-          courtNumber: String(index + 1),
-          sports: [{ sportId: "tennis" }],
-          config: { pricing: { default: { cents: 0 } } },
-          allowedReservationDurations: { minutes: [60] },
-          defaultReservationWindowDays: 7,
-          reservationReleaseTimeLocal: "08:00:00",
-        })),
-      },
-      formattedAddress: "1 Test St",
-      hoursOfOperation: "",
-      accessInfo: "",
-      gettingThereInfo: "",
-      images: {},
-    },
-  ];
-}
-
 afterEach(() => {
-  vi.useRealTimers();
   vi.unstubAllGlobals();
+  vi.restoreAllMocks();
 });
 
+const DETAIL = (overrides = {}) => ({
+  location: {
+    id: "loc-1",
+    name: "Test Location",
+    lat: "37.77",
+    lng: "-122.42",
+    formattedAddress: "1 Test St",
+    hoursOfOperation: "7am-7pm",
+    accessInfo: "Public",
+    gettingThereInfo: "Walk",
+    images: {
+      detail: { url: "https://example.com/detail.jpg" },
+      thumbnail: { url: "https://example.com/thumb.jpg" },
+    },
+    courts: [
+      {
+        id: "court-1",
+        courtNumber: "Court 1",
+        sports: [{ sportId: "sport-tennis" }],
+        config: { pricing: { default: { type: "perHour", cents: 500 } } },
+        allowedReservationDurations: { minutes: [60, 90] },
+        defaultReservationWindowDays: 7,
+        reservationReleaseTimeLocal: "08:00:00",
+        archivedAt: null,
+      },
+      {
+        id: "court-archived",
+        courtNumber: "Old Court",
+        sports: [{ sportId: "sport-tennis" }],
+        archivedAt: "2026-01-01T00:00:00.000Z",
+      },
+    ],
+    ...overrides,
+  },
+  distance: null,
+});
+
+function mockDetailFetch(handler: (url: string) => { status: number; body?: unknown }) {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn().mockImplementation(async (url: string) => {
+      const { status, body } = handler(url);
+      return {
+        ok: status >= 200 && status < 300,
+        status,
+        statusText: status === 200 ? "OK" : "Error",
+        json: async () => body,
+      };
+    })
+  );
+}
+
 describe("fetchAllCourts", () => {
-  it("treats a successful response with no slots as confirmed full availability", async () => {
-    const fetchMock = vi
-      .fn()
-      .mockResolvedValueOnce(jsonResponse(bulkResponse(["court-1"])))
-      .mockResolvedValueOnce(jsonResponse({ data: {} }));
-    vi.stubGlobal("fetch", fetchMock);
-
-    const locations = await fetchAllCourts("test-organization");
-
-    expect(locations[0].availabilityStatus).toBe("full");
-    expect(locations[0].courts[0].availableSlots).toEqual([]);
+  beforeEach(() => {
+    vi.unstubAllGlobals();
+    vi.spyOn(console, "warn").mockImplementation(() => {});
   });
 
-  it("rejects mixed per-court results instead of reporting a failed court as full", async () => {
-    const fetchMock = vi
-      .fn()
-      .mockResolvedValueOnce(
-        jsonResponse(bulkResponse(["court-empty", "court-failed"]))
-      )
-      .mockResolvedValueOnce(jsonResponse({ data: {} }))
-      .mockResolvedValueOnce(
-        new Response(null, { status: 500, statusText: "Internal Server Error" })
-      );
-    vi.stubGlobal("fetch", fetchMock);
+  it("maps location details to metadata with empty slots", async () => {
+    mockDetailFetch(() => ({ status: 200, body: DETAIL() }));
 
-    await expect(fetchAllCourts("test-organization")).rejects.toThrow(
-      "rec.us per-site API error for court court-failed"
+    const [loc] = await fetchAllCourts("san-francisco-rec-park");
+
+    expect(loc.id).toBe("loc-1");
+    expect(loc.name).toBe("Test Location");
+    expect(loc.lat).toBe(37.77);
+    expect(loc.imageUrl).toBe("https://example.com/detail.jpg");
+    // Archived courts are dropped; live slots arrive client-side.
+    expect(loc.courts.map((c) => c.id)).toEqual(["court-1"]);
+    expect(loc.courts[0]).toMatchObject({
+      courtNumber: "Court 1",
+      sportId: "sport-tennis",
+      priceCentsPerHour: 500,
+      allowedDurations: [60, 90],
+      availableSlots: [],
+      bookingUrl: "https://www.rec.us/locations/loc-1?courtId=court-1&tab=calendar",
+    });
+    expect(loc.availabilityStatus).toBe("full");
+  });
+
+  it("skips failing locations instead of failing the city", async () => {
+    const { CITIES } = await import("./constants");
+    const failingId = CITIES.sf.locationIds[0];
+    mockDetailFetch((url) =>
+      url.includes(failingId) ? { status: 403 } : { status: 200, body: DETAIL() }
+    );
+
+    const locations = await fetchAllCourts("san-francisco-rec-park");
+
+    expect(locations).toHaveLength(CITIES.sf.locationIds.length - 1);
+    expect(vi.mocked(console.warn)).toHaveBeenCalled();
+  });
+
+  it("throws when all locations fail", async () => {
+    mockDetailFetch(() => ({ status: 403 }));
+    await expect(fetchAllCourts("san-francisco-rec-park")).rejects.toThrow(
+      "all location detail requests failed"
     );
   });
 
-  it.each([
-    ["spring forward", "2026-03-08T07:30:00Z", "2026-03-07", "2026-03-14"],
-    ["fall back", "2026-11-01T07:30:00Z", "2026-11-01", "2026-11-08"],
-  ])(
-    "requests seven Los Angeles calendar days across %s",
-    async (_transition, now, expectedStart, expectedEnd) => {
-      vi.useFakeTimers();
-      vi.setSystemTime(new Date(now));
+  it("falls back to the default city for unknown slugs", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => DETAIL(),
+    });
+    vi.stubGlobal("fetch", fetchMock);
 
-      const fetchMock = vi
-        .fn()
-        .mockResolvedValueOnce(jsonResponse(bulkResponse(["court-1"])))
-        .mockResolvedValueOnce(jsonResponse({ data: {} }));
-      vi.stubGlobal("fetch", fetchMock);
+    await fetchAllCourts("no-such-city");
 
-      await fetchAllCourts("test-organization");
-
-      const availabilityUrl = new URL(String(fetchMock.mock.calls[1][0]));
-      expect(availabilityUrl.searchParams.get("startDate")).toBe(expectedStart);
-      expect(availabilityUrl.searchParams.get("endDate")).toBe(expectedEnd);
-    }
-  );
+    expect(fetchMock).toHaveBeenCalled();
+    const firstUrl = String(fetchMock.mock.calls[0][0]);
+    expect(firstUrl).toMatch(/^https:\/\/api\.rec\.us\/v1\/locations\/[0-9a-f-]{36}\?publishedSites=true$/);
+  });
 });

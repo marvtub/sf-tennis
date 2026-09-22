@@ -58,16 +58,26 @@ security headers, and rate-limits API, HTML, and discovery surfaces
 ## Availability Data Flow
 
 rec.us's bulk availability endpoint returns theoretical schedule slots. It does
-not reflect actual bookings. Keep the existing two-step flow in
-`src/lib/recus.ts`:
+not reflect actual bookings. Worse, since Sep 2026 rec.us edge-filtering 403s
+every availability endpoint (`/v1/locations/availability`,
+`/v1/sites/{id}/availability`, `/v1/locations/{id}/schedule`) for server
+runtimes (Cloudflare Workers gets the ALB block page), while the metadata
+endpoints keep working. Keep the existing split flow:
 
-1. Fetch bulk `/v1/locations/availability` for location metadata and court IDs.
-2. Fetch `/v1/sites/{id}/availability` for every court, batched 15 at a time.
+1. Server (`src/lib/recus.ts`, `/api/courts`): per-location
+   `/v1/locations/{id}` for the city's configured `locationIds` in `CITIES`
+   returns metadata only (`availableSlots: []`, `slotsPending: true`), cached
+   with `s-maxage=METADATA_CACHE_SECONDS`.
+2. Browser (`useCourts` via `src/lib/availability-client.ts`): per-court
+   `/v1/sites/{id}/availability` for every court, batched 15 at a time, merged
+   client-side. rec.us serves real browsers (CORS `*`; same calls as rec.us's
+   own frontend). A single court failing yields no slots for that court, never
+   a total failure.
 
-After availability is assembled, `enrichCourtsWithWeather` in
-`src/lib/weather.ts` batches Open-Meteo forecast calls per location. Weather is
-best effort: failures should return empty weather data rather than failing the
-court response.
+Weather is attached client-side (`src/lib/weather-client.ts`, Open-Meteo
+direct); failures leave slots without weather rather than failing the load.
+Don't move slot fetching back server-side — it 403s. If rec.us adds a
+location, add its UUID to the city's `locationIds`.
 
 Cities live in `CITIES` in `src/lib/constants.ts`. Sports are filtered by
 `SPORT_ID_TENNIS` and `SPORT_ID_PICKLEBALL`.

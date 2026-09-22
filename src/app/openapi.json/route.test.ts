@@ -88,6 +88,7 @@ describe("GET /openapi.json", () => {
       "city",
       "fetchedAt",
       "courts",
+      "slotsPending",
     ]);
     expect(schemas.Location.required).toEqual([
       "id",

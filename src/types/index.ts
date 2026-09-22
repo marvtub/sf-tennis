@@ -1,54 +1,43 @@
 // ── rec.us API response types ──
+//
+// Only the metadata endpoints are reachable from server runtimes; the
+// availability endpoints are edge-blocked (see lib/recus.ts). These types
+// describe `GET /v1/locations/{id}?publishedSites=true`.
 
-export interface RecUsLocationResponse {
-  location: RecUsLocation;
-  formattedAddress: string;
-  hoursOfOperation: string;
-  images: Record<string, string>;
-  accessInfo: string;
-  gettingThereInfo: string;
+export interface RecUsLocationDetailResponse {
+  location: RecUsLocationDetail;
   distance: number | null;
 }
 
-export interface RecUsLocation {
+export interface RecUsLocationDetail {
   id: string;
   name: string;
-  organizationId: string;
-  timezone: string;
   lat: string;
   lng: string;
-  defaultReservationWindow: number;
-  reservationReleaseTimeLocal: string;
-  courts: RecUsCourt[];
+  formattedAddress?: string;
+  hoursOfOperation?: string | null;
+  accessInfo?: string | null;
+  gettingThereInfo?: string | null;
+  images?: {
+    detail?: { url?: string };
+    thumbnail?: { url?: string };
+  };
+  courts?: RecUsDetailCourt[];
 }
 
-export interface RecUsCourt {
+export interface RecUsDetailCourt {
   id: string;
-  locationId: string;
   courtNumber: string;
-  publishedAt: string;
-  maxReservationTime: string; // "01:30:00"
-  defaultReservationWindowDays: number;
-  reservationReleaseTimeLocal: string;
-  config: {
-    pricing: {
-      default: { type: string; cents: number };
-      rules?: Array<unknown>;
+  sports?: Array<{ sportId: string }>;
+  config?: {
+    pricing?: {
+      default?: { type: string; cents: number };
     };
-    bookingPolicies: Array<{
-      type: string;
-      slots: Array<{
-        dayOfWeek: number;
-        startTimeLocal: string;
-        endTimeLocal: string;
-      }>;
-      isActive: boolean;
-    }>;
   };
-  allowedReservationDurations: { minutes: number[] };
-  availableSlots: string[]; // "2026-03-30 07:30:00"
-  sports?: Array<{ id: string; sportId: string }>;
-  isInstantBookable: boolean;
+  allowedReservationDurations?: { minutes: number[] };
+  defaultReservationWindowDays?: number | null;
+  reservationReleaseTimeLocal?: string | null;
+  archivedAt?: string | null;
 }
 
 // ── App types (transformed for frontend) ──

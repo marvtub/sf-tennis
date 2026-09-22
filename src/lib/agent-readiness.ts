@@ -30,7 +30,7 @@ Repository: ${GITHUB_URL}
 
 ## What this app does
 
-- Shows live court availability from rec.us using per-court availability checks.
+- Shows live court availability from rec.us using per-court availability checks run in the browser.
 - Supports tennis and pickleball in San Francisco and Mountain View.
 - Adds travel-time overlays from a user's location through Mapbox Directions.
 - Exposes public courts, directions, and health APIs for planning workflows.
@@ -102,7 +102,7 @@ Use SF Tennis at ${SITE_URL} to find pickleball availability in Mountain View th
 ### Compare nearby options
 
 \`\`\`text
-Use SF Tennis at ${SITE_URL} to compare tennis courts near my location. Use ${SITE_URL}/api/courts for live slots and ${SITE_URL}/api/directions for walking and driving estimates when coordinates are available.
+Use SF Tennis at ${SITE_URL} to compare tennis courts near my location. Use ${SITE_URL}/api/courts for court metadata and ${SITE_URL}/api/directions for walking and driving estimates when coordinates are available. Live slots are filled in by the browser app; the API returns metadata with empty availableSlots and slotsPending:true.
 \`\`\`
 
 ## Screenshots
@@ -113,7 +113,7 @@ Use SF Tennis at ${SITE_URL} to compare tennis courts near my location. Use ${SI
 
 ## Data notes
 
-The rec.us bulk availability endpoint is not enough for this app because it reports theoretical schedule slots. SF Tennis fetches every court's per-site availability and caches the assembled response for a short period.
+The rec.us bulk availability endpoint is not enough for this app because it reports theoretical schedule slots. Browsers fetch every court's per-site availability from rec.us directly (rec.us blocks server runtimes); the server caches court metadata for up to an hour.
 `;
 
 export const LLMS_TXT = `# SF Tennis
@@ -158,7 +158,7 @@ Read the machine contract at ${SITE_URL}/openapi.json before writing code agains
 ## High-value prompts
 
 \`\`\`text
-Find me open tennis courts in San Francisco tonight using SF Tennis at ${SITE_URL}. Use the public API, rank by slots today and travel time when available, and cite the API URL.
+Find me open tennis courts in San Francisco tonight using SF Tennis at ${SITE_URL}. Use the public API for court metadata, read live slots from the browser app, rank by slots today and travel time when available, and cite the API URL.
 \`\`\`
 
 \`\`\`text
@@ -173,7 +173,7 @@ Use SF Tennis at ${SITE_URL} to compare tennis courts near my location. Use the 
 
 - Framework: Next.js App Router on Cloudflare Workers via OpenNext.
 - Map: Mapbox GL through react-map-gl.
-- Source of truth for availability: per-court rec.us availability, not the stale bulk endpoint alone.
+- Source of truth for availability: per-court rec.us availability fetched in the browser, not the stale bulk endpoint alone. /api/courts returns metadata with slotsPending:true and empty availableSlots.
 `;
 
 export const SKILL_MD = `---
@@ -195,9 +195,9 @@ Use this skill when a user asks about public tennis or pickleball availability i
 
 1. Pick the sport: tennis or pickleball.
 2. Pick the city: sf or mountain-view.
-3. Call /api/courts?sport=<sport>&city=<city>.
-4. Prefer locations with totalSlotsToday > 0 when the user asks for today.
-5. Include location names, available slot times, court numbers, and the fetchedAt timestamp in the answer.
+3. Call /api/courts?sport=<sport>&city=<city> for court metadata (availableSlots is empty server-side; slotsPending:true).
+4. For live slots, use the browser app at ${SITE_URL}; never present metadata totals as availability.
+5. Include location names, court numbers, and the fetchedAt timestamp in the answer; include slot times only when read from the browser app.
 
 ## Common prompts
 
