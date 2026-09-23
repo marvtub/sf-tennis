@@ -29,15 +29,18 @@ interface RateLimitEnv extends CloudflareEnv {
 //
 // Mapbox connects to api.mapbox.com (tiles + Directions) and events.mapbox.com
 // (telemetry). Tile/sprite/glyph assets live under *.tiles.mapbox.com.
+// Browsers also fetch live court availability from api.rec.us and forecasts
+// from api.open-meteo.com directly (rec.us blocks server runtimes), so both
+// hosts must stay in connect-src or the app silently shows zero slots.
 
-const CSP = [
+export const CSP = [
   "default-src 'self'",
   "script-src 'self' 'unsafe-inline' 'unsafe-eval' blob:",
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: https://*.mapbox.com https://*.tiles.mapbox.com",
   "font-src 'self' data:",
   "worker-src 'self' blob:",
-  "connect-src 'self' https://api.mapbox.com https://events.mapbox.com https://*.tiles.mapbox.com",
+  "connect-src 'self' https://api.mapbox.com https://events.mapbox.com https://*.tiles.mapbox.com https://api.rec.us https://api.open-meteo.com",
   "frame-ancestors 'none'",
   "base-uri 'self'",
   "form-action 'self'",
