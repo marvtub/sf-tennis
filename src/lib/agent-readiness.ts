@@ -150,6 +150,7 @@ Read the machine contract at ${SITE_URL}/openapi.json before writing code agains
 ## Safe automation behavior
 
 - Do not invent availability. If the courts API fails, report that live availability could not be fetched.
+- In WebMCP-enabled browsers the page exposes sf_tennis_find_slots, sf_tennis_get_courts, sf_tennis_get_directions, and sf_tennis_get_docs; HTTP endpoints remain available as fallback.
 - Prefer the docs and OpenAPI contract over scraping the client UI.
 - Include source URLs in summaries so the user can verify the result.
 - On HTTP 429 or 502 from /api/courts, honor Retry-After (or wait at least 60s) and do not tight-loop retries.
@@ -196,7 +197,7 @@ Use this skill when a user asks about public tennis or pickleball availability i
 1. Pick the sport: tennis or pickleball.
 2. Pick the city: sf or mountain-view.
 3. Call /api/courts?sport=<sport>&city=<city> for court metadata (availableSlots is empty server-side; slotsPending:true).
-4. For live slots, use the browser app at ${SITE_URL}; never present metadata totals as availability.
+4. For live slots, use the browser app at ${SITE_URL}; never present metadata totals as availability. In a WebMCP-enabled browser the page also exposes sf_tennis_find_slots (live openings), sf_tennis_get_courts, sf_tennis_get_directions, and sf_tennis_get_docs — prefer those tools over raw endpoint calls when available.
 5. Include location names, court numbers, and the fetchedAt timestamp in the answer; include slot times only when read from the browser app.
 
 ## Common prompts
