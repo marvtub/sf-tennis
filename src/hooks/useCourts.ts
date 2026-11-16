@@ -13,6 +13,8 @@ import { enrichCourtsWithWeatherClient } from "@/lib/weather-client";
 interface CourtsData {
   courts: CourtLocation[];
   fetchedAt: string | null;
+  /** Changes once per completed load (not when weather arrives). */
+  loadId: number;
   loading: boolean;
   error: string | null;
   refresh: () => void;
@@ -21,6 +23,7 @@ interface CourtsData {
 export function useCourts(sport: Sport = "tennis", city: CityId = "sf"): CourtsData {
   const [courts, setCourts] = useState<CourtLocation[]>([]);
   const [fetchedAt, setFetchedAt] = useState<string | null>(null);
+  const [loadId, setLoadId] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const latestRequestId = useRef(0);
@@ -71,6 +74,7 @@ export function useCourts(sport: Sport = "tennis", city: CityId = "sf"): CourtsD
       // Show courts now. Weather must never hold them back: when Open-Meteo
       // is unreachable its requests hang, and the map stayed at "0 courts".
       setCourts(withSlots);
+      setLoadId(requestId);
       setLoading(false);
 
       // 3. Hourly weather per location (best-effort; slots stay without it).
@@ -94,5 +98,5 @@ export function useCourts(sport: Sport = "tennis", city: CityId = "sf"): CourtsD
     };
   }, [fetchCourts]);
 
-  return { courts, fetchedAt, loading, error, refresh: fetchCourts };
+  return { courts, fetchedAt, loadId, loading, error, refresh: fetchCourts };
 }

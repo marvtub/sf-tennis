@@ -53,9 +53,9 @@ export default function HomePage() {
   }, []);
 
   // Data hooks
-  const { courts: rawCourts, fetchedAt, loading, error, refresh } = useCourts(sport, city);
+  const { courts: rawCourts, fetchedAt, loadId, loading, error, refresh } = useCourts(sport, city);
   const userLocation = useUserLocation(city);
-  const travelTimes = useTravelTimes(rawCourts, userLocation);
+  const travelTimes = useTravelTimes(rawCourts, userLocation, loadId);
 
   // UI state
   const [selectedId, setSelectedId] = useState<string | null>(null);

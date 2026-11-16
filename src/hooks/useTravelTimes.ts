@@ -33,7 +33,9 @@ function cacheKey(origin: UserLocation, courtIds: string): string {
 
 export function useTravelTimes(
   courts: CourtLocation[],
-  origin: UserLocation
+  origin: UserLocation,
+  // Changes once per courts load, so Refresh retries failed directions.
+  loadId = 0
 ): Map<string, TravelTime> {
   const [travelTimes, setTravelTimes] = useState<Map<string, TravelTime>>(
     new Map()
@@ -114,7 +116,7 @@ export function useTravelTimes(
       cancelled = true;
       controller.abort();
     };
-  }, [courtIdStr, locationsParam, origin.lat, origin.lng]);
+  }, [courtIdStr, locationsParam, origin.lat, origin.lng, loadId]);
 
   return travelTimes;
 }
