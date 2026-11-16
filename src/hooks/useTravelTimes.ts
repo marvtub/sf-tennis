@@ -33,14 +33,23 @@ function cacheKey(origin: UserLocation, courtIds: string): string {
 
 export function useTravelTimes(
   courts: CourtLocation[],
-  origin: UserLocation
+  origin: UserLocation,
+  // Changes once per courts load, so Refresh retries failed directions.
+  loadId = 0
 ): Map<string, TravelTime> {
   const [travelTimes, setTravelTimes] = useState<Map<string, TravelTime>>(
     new Map()
   );
 
+  // Depend on stable strings, not the `courts` array. useCourts publishes the
+  // array twice (slots first, weather later); an identity dependency would
+  // abort the in-flight directions request and send it again.
+  const courtIdStr = courts.map((c) => c.id).join(",");
+  // Locations param: id1:lat1,lng1|id2:lat2,lng2
+  const locationsParam = courts.map((c) => `${c.id}:${c.lat},${c.lng}`).join("|");
+
   useEffect(() => {
-    if (courts.length === 0) {
+    if (locationsParam === "") {
       setTravelTimes(new Map());
       return;
     }
@@ -48,7 +57,6 @@ export function useTravelTimes(
     const controller = new AbortController();
     let cancelled = false;
 
-    const courtIdStr = courts.map((c) => c.id).join(",");
     const key = cacheKey(origin, courtIdStr);
 
     // Check localStorage cache
@@ -65,11 +73,6 @@ export function useTravelTimes(
     } catch {
       // Cache miss, continue to fetch
     }
-
-    // Build locations param: id1:lat1,lng1|id2:lat2,lng2
-    const locationsParam = courts
-      .map((c) => `${c.id}:${c.lat},${c.lng}`)
-      .join("|");
 
     const originParam = `${origin.lat},${origin.lng}`;
 
@@ -113,7 +116,7 @@ export function useTravelTimes(
       cancelled = true;
       controller.abort();
     };
-  }, [courts, origin.lat, origin.lng]);
+  }, [courtIdStr, locationsParam, origin.lat, origin.lng, loadId]);
 
   return travelTimes;
 }

@@ -75,7 +75,7 @@ describe("fetchCourtsAvailability", () => {
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(fetchMock).toHaveBeenCalledWith(
       "https://api.rec.us/v1/sites/c1/availability?startDate=2026-09-22&endDate=2026-09-29",
-      { headers: { Accept: "application/json" } }
+      { headers: { Accept: "application/json" }, signal: expect.any(AbortSignal) }
     );
     expect(result.get("c1")).toEqual([
       { datetime: "2026-09-22 10:30", date: "2026-09-22", time: "10:30" },
