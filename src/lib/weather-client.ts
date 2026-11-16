@@ -6,6 +6,8 @@ import type { CourtLocation, SlotWeather } from "@/types";
 // server-only fetch options. Open-Meteo allows browser CORS (`*`).
 const OPEN_METEO_BASE = "https://api.open-meteo.com/v1/forecast";
 const WEATHER_BATCH_SIZE = 8;
+// Without a limit, a dead Open-Meteo leaves each request pending for minutes.
+const WEATHER_TIMEOUT_MS = 6000;
 
 interface OpenMeteoResponse {
   hourly?: {
@@ -60,7 +62,7 @@ async function fetchLocationWeather(lat: number, lng: number): Promise<Map<strin
     url.searchParams.set("forecast_days", "7");
     url.searchParams.set("timezone", "America/Los_Angeles");
 
-    const res = await fetch(url.toString());
+    const res = await fetch(url.toString(), { signal: AbortSignal.timeout(WEATHER_TIMEOUT_MS) });
     if (!res.ok) return new Map();
 
     const data = (await res.json()) as OpenMeteoResponse;

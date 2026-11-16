@@ -68,6 +68,11 @@ export function useCourts(sport: Sport = "tennis", city: CityId = "sf"): CourtsD
         };
       });
 
+      // Show courts now. Weather must never hold them back: when Open-Meteo
+      // is unreachable its requests hang, and the map stayed at "0 courts".
+      setCourts(withSlots);
+      setLoading(false);
+
       // 3. Hourly weather per location (best-effort; slots stay without it).
       const withWeather = await enrichCourtsWithWeatherClient(withSlots);
       if (!isLatest()) return;

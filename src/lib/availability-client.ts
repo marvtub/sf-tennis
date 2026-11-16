@@ -44,7 +44,11 @@ async function fetchCourtSlots(
 ): Promise<{ courtId: string; slots: TimeSlot[] }> {
   try {
     const url = `${RECUS_API_BASE}/v1/sites/${courtId}/availability?startDate=${startDate}&endDate=${endDate}`;
-    const res = await fetch(url, { headers: { Accept: "application/json" } });
+    const res = await fetch(url, {
+      headers: { Accept: "application/json" },
+      // A hung rec.us request must not hold back every other court.
+      signal: AbortSignal.timeout(10000),
+    });
     if (!res.ok) return { courtId, slots: [] };
     const data = (await res.json()) as SiteAvailabilityPayload;
     return { courtId, slots: parseSiteSlots(data) };
